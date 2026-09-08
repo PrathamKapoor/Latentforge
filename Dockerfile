@@ -14,16 +14,16 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# Set up an isolated Python virtual environment.
-ENV VIRTUAL_ENV=/opt/venv
-RUN python3 -m venv $VIRTUAL_ENV
-ENV PATH="$VIRTUAL_ENV/bin:${PATH}"
-ENV PYTHON="$VIRTUAL_ENV/bin/python3"
-
 # Python dependencies (CPU-only PyTorch wheel).
 COPY requirements.txt ./
-RUN pip install --no-cache-dir --upgrade pip \
- && pip install --no-cache-dir -r requirements.txt --index-url https://download.pytorch.org/whl/cpu
+RUN python3 -m venv /opt/venv \
+ && /opt/venv/bin/python -m pip install --upgrade pip \
+ && /opt/venv/bin/python -m pip install --no-cache-dir \
+    -r requirements.txt \
+    --extra-index-url https://download.pytorch.org/whl/cpu
+
+ENV PATH="/opt/venv/bin:${PATH}"
+ENV PYTHON="/opt/venv/bin/python3"
 
 # Node dependencies (none declared beyond package metadata as of this phase,
 # but `npm ci` still validates the lockfile).

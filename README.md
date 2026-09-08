@@ -1,4 +1,4 @@
-﻿# LatentForge
+# LatentForge
 
 **An Interactive Laboratory for Recurrent Latent Reasoning**
 
@@ -195,7 +195,7 @@ There are no silent fallbacks between evidence categories. If a live runner fail
 
 3. **Install Python dependencies:**
    ```bash
-   pip install -r requirements.txt --index-url https://download.pytorch.org/whl/cpu
+   pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
    ```
 
 4. **Verify the installation:**
