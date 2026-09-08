@@ -5,20 +5,25 @@
 
 FROM node:24-slim
 
-# python3/pip3 for the persistent worker (src/reasoning/worker-server.py);
-# no compiler toolchain is needed since the CPU wheel is precompiled.
+# python3, pip, and venv for the persistent worker (src/reasoning/worker-server.py);
+# installed without --no-install-recommends so ensurepip wheels (python3-pip-whl)
+# are included for venv creation.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 python3-pip python3-venv \
+ && apt-get install -y python3 python3-pip python3-venv \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Python dependencies first (better layer caching than copying app code first).
+# Set up an isolated Python virtual environment.
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:${PATH}"
+ENV PYTHON="$VIRTUAL_ENV/bin/python3"
+
+# Python dependencies (CPU-only PyTorch wheel).
 COPY requirements.txt ./
-RUN python3 -m venv /opt/venv \
- && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt --index-url https://download.pytorch.org/whl/cpu
-ENV PATH="/opt/venv/bin:${PATH}"
-ENV PYTHON="/opt/venv/bin/python3"
+RUN pip install --no-cache-dir --upgrade pip \
+ && pip install --no-cache-dir -r requirements.txt --index-url https://download.pytorch.org/whl/cpu
 
 # Node dependencies (none declared beyond package metadata as of this phase,
 # but `npm ci` still validates the lockfile).
