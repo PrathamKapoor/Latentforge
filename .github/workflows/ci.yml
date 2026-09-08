@@ -47,7 +47,11 @@ jobs:
             sleep 2
           done
           curl -sf http://127.0.0.1:4173/health
-          curl -sf http://127.0.0.1:4173/ready || true
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:4173/ready > /dev/null; then break; fi
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:4173/ready
           curl -sf -X POST http://127.0.0.1:4173/api/experiment \
             -H 'content-type: application/json' \
             -d '{"backend":"recurrent","task":"1,0,1,1","reasoningBudget":4,"includeBudgetSweep":false}'

@@ -2,6 +2,7 @@ import { createServer } from './server.js';
 import { pythonWorker } from '../reasoning/worker-client.js';
 
 const port = Number(process.env.PORT || 4173);
+const host = process.env.HOST || '0.0.0.0';
 const server = createServer();
 
 // Eagerly start the persistent worker in the background so it's warm by
@@ -12,8 +13,8 @@ pythonWorker.start().catch((error) => {
   console.error(`LatentForge: the local Python worker failed to start (${error.code}): ${error.message}`);
 });
 
-server.listen(port, '127.0.0.1', () => {
-  console.log(`LatentForge is running at http://127.0.0.1:${port}`);
+server.listen(port, host, () => {
+  console.log(`LatentForge is running at http://${host}:${port}`);
 });
 
 async function shutdown(signal) {
