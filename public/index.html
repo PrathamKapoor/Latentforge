@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="LatentForge: an interactive laboratory for recurrent latent reasoning." />
+    <title>LatentForge — Interactive Laboratory</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#experiment">Skip to experiment</a>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="LatentForge home"><span class="brand-mark" aria-hidden="true"></span><span>LatentForge<small>INTERACTIVE LABORATORY</small></span></a>
+      <nav aria-label="Primary navigation"><a href="#learn">Explore</a><a href="#experiment">Experiment</a><a href="#research">Research</a><a href="#limitations">Limitations</a><a class="nav-run" href="#experiment">Run experiment <span aria-hidden="true">↗</span></a></nav>
+    </header>
+    <main id="top">
+      <section class="hero" id="learn" aria-labelledby="hero-title">
+        <div class="eyebrow">LatentForge</div>
+        <p class="kicker">An Interactive Laboratory for Recurrent Latent Reasoning</p>
+        <h1 id="hero-title">What happens when we give a model more time to think<br /><em>without giving it more tokens to think with?</em></h1>
+        <p class="hero-copy">A deterministic local substrate refines a hidden numerical state instead of writing out intermediate reasoning text. You choose how many times it updates that state, then check its answer against an independently computed truth — no hidden text, no fabricated result.</p>
+        <a class="primary-button" href="#experiment">Run the experiment <span aria-hidden="true">↓</span></a>
+        <div class="claim-panel" aria-labelledby="claim-title">
+          <p class="evidence-word">FALSIFIABLE CLAIM</p>
+          <p id="claim-title"><strong>A model can perform repeated computation by refining a hidden state instead of verbalizing every intermediate step.</strong> This laboratory demonstrates the mechanism using a tiny deterministic local substrate; it does not establish that latent reasoning is universally better or that more computation always improves answers.</p>
+        </div>
+        <div class="hero-trajectory" aria-label="Illustrative recurrent state progression"><span>h₀</span><i></i><span>h₁</span><i></i><span>h₂</span><i></i><span>h₃</span><i></i><span>h₄</span><p>STATE REFINEMENT / ILLUSTRATIVE</p></div>
+        <div class="evidence-note"><strong>LOCAL TOY</strong><span>Inspect a deterministically initialized, untrained recurrent substrate, or select the illustrative synthetic contract demo.</span></div>
+        <section class="research-grid" id="limitations" aria-labelledby="live-now-title" style="margin-top:2rem">
+          <article>
+            <p class="evidence-word">LIVE NOW</p>
+            <h3 id="live-now-title">What is actually running</h3>
+            <ul>
+              <li>Recurrent latent-state execution (persistent local worker)</li>
+              <li>Reasoning-budget manipulation (1, 2, 4, 8)</li>
+              <li>State trajectory inspection</li>
+              <li>Truth/reference comparison</li>
+              <li>HRM-inspired hierarchical recurrence</li>
+              <li>BDH-CQ-inspired recurrent memory</li>
+              <li>Local seed characterization (not a benchmark)</li>
+              <li>Deterministic reproducibility, same seed → same result</li>
+            </ul>
+          </article>
+          <article>
+            <p class="evidence-word">NOT CLAIMED</p>
+            <h3>What this does not prove</h3>
+            <ul>
+              <li>Latent reasoning is universally superior to explicit chain-of-thought</li>
+              <li>More recurrent steps always improve accuracy</li>
+              <li>Latent states correspond to human-readable thoughts</li>
+              <li>The HRM-inspired or BDH-CQ-inspired modes reproduce those papers</li>
+              <li>Latent computation is cheaper than verbal reasoning</li>
+              <li>This toy substrate represents frontier reasoning systems</li>
+            </ul>
+          </article>
+        </section>
+      </section>
+      <section class="guided-section" id="hierarchy-lesson" aria-labelledby="hierarchy-lesson-title"><div class="section-heading"><div><p class="eyebrow">GUIDED / HRM-INSPIRED</p><h2 id="hierarchy-lesson-title">Two interacting recurrent levels</h2></div><p id="hierarchy-status" class="status-chip" role="status" aria-live="polite">LOCKED: RUN HIERARCHY</p></div><p>You have seen one recurrent state. What changes when recurrent computation is organized into interacting levels?</p><button id="run-hierarchy" type="button">Run hierarchical experiment</button><button id="inspect-hierarchy" type="button" disabled>Inspect H/L telemetry</button><button id="compare-hierarchy" type="button" disabled>Compare with single recurrence</button><p id="hierarchy-lesson-copy" class="field-help">Complete a real LIVE hierarchical run, inspect returned H/L states, then compare actual executions.</p><section id="hierarchy-comparison" hidden aria-labelledby="hierarchy-comparison-title"><h3 id="hierarchy-comparison-title">Same task/reference; different recurrent architecture.</h3><div class="table-scroll"><table><caption>LIVE architecture comparison</caption><thead><tr><th>Mode</th><th>Run ID</th><th>Prediction</th><th>Truth</th><th>Correctness</th><th>Evidence</th></tr></thead><tbody id="hierarchy-comparison-body"></tbody></table></div></section><section id="research-hrm" hidden aria-labelledby="research-hrm-title"><h3 id="research-hrm-title">Research → HRM-inspired</h3><h4>What the paper describes <span>PUBLISHED</span></h4><p>Coupled high- and low-level recurrent modules with different update cadence and high-level output readout.</p><h4>What LatentForge implements <span>LIVE</span></h4><p>A deterministic, untrained local H/L recurrence with returned numerical telemetry.</p><h4>What LatentForge simplifies <span>LOCAL SIMPLIFICATION</span></h4><p>It omits the published training, deep supervision, gradient approximation, adaptive computation, datasets, and benchmarks.</p><h4>What this experiment does not prove</h4><p>It does not establish HRM superiority, benchmark performance, efficiency, token savings, or general accuracy improvement.</p></section></section>
+      <section class="guided-section" id="guided" aria-labelledby="guided-title">
+        <div class="section-heading"><div><p class="eyebrow">GUIDED / DEFAULT</p><h2 id="guided-title">Watch the state change</h2></div><p id="mode-status" class="status-chip">GUIDED MODE</p></div>
+        <p id="guided-copy">Loading a live preset: task <code>1,0,1,1</code>, budget 4.</p>
+        <ol class="lesson-steps" id="lesson-steps"><li data-lesson="1">1. Question</li><li data-lesson="2">2. Inspect state</li><li data-lesson="3">3. Shared rule</li><li data-lesson="4">4. Manipulate budget</li><li data-lesson="5">5. Limitation</li></ol>
+        <div class="guided-actions"><button id="lesson-next" type="button">Next lesson step</button><button id="enter-sandbox" type="button" disabled>Enter sandbox</button></div>
+        <section id="knowledge-check" hidden aria-labelledby="check-title"><h3 id="check-title">Quick check</h3><p>If the same recurrent transition runs twice instead of once, what changes?</p><div class="choice-grid"><button type="button" data-choice="A">A. A new token arrives</button><button type="button" data-choice="B">B. The hidden state updates again</button><button type="button" data-choice="C">C. The weights retrain</button><button type="button" data-choice="D">D. Ground truth changes</button></div><p id="check-status" role="status" aria-live="polite"></p></section>
+        <section id="explanation-prompt" hidden aria-labelledby="explanation-title"><h3 id="explanation-title">Explain it in one sentence</h3><label for="learner-explanation">What changes when the recurrent reasoning budget increases?</label><textarea id="learner-explanation" rows="3"></textarea><button id="submit-explanation" type="button">Show reference explanation</button><p id="reference-explanation" hidden>A larger budget applies the same recurrent update more times, producing more latent states before the prediction is read from the final state.</p></section>
+      </section>
+      <section class="workspace" id="experiment" aria-labelledby="experiment-title">
+        <div class="section-heading"><div><p class="eyebrow">01 / EXPERIMENT</p><h2 id="experiment-title">Reasoning experiment workspace</h2></div><p class="status-chip" id="substrate-status">SUBSTRATE: RECURRENT / NOT YET RUN</p></div>
+        <div class="workspace-grid">
+          <form class="control-panel" id="experiment-form" novalidate>
+            <h3>Configure a deterministic task</h3>
+            <p class="panel-copy">Compare computation budgets and inspect numerical state observations from the selected backend.</p>
+            <label for="backend">Backend</label>
+            <select id="backend" name="backend" aria-describedby="backend-help"><option value="recurrent" selected>Live recurrent substrate</option><option value="hrm-inspired">HRM-inspired hierarchical recurrence</option><option value="bdh-cq-inspired">BDH-CQ-inspired memory workspace</option><option value="synthetic">Synthetic contract demo</option></select>
+            <p id="backend-help" class="field-help">Local toy neural substrate with fixed initialization; no training.</p>
+            <label for="task">Task</label>
+            <input id="task" name="task" value="1,0,1,1" autocomplete="off" aria-describedby="task-help" />
+            <p id="task-help" class="field-help">Enter four comma-separated binary moves (0 = left, 1 = right). Start at position 2 on positions 0–4; each move is clamped to the boundary.</p>
+            <fieldset id="demonstration-control" hidden><legend>Demonstrations <span class="control-note">build S memory</span></legend><div class="budget-options"><label><input type="radio" name="demonstrationCount" value="1" />1</label><label><input type="radio" name="demonstrationCount" value="2" checked />2</label><label><input type="radio" name="demonstrationCount" value="3" />3</label></div><p class="field-help">Only BDH-CQ-inspired mode uses this control. It changes sequential memory updates; it does not change H workspace depth.</p></fieldset>
+            <fieldset><legend>Computation budget</legend><div class="budget-options"><label><input type="radio" name="budget" value="1" />1</label><label><input type="radio" name="budget" value="2" />2</label><label><input type="radio" name="budget" value="4" checked />4</label><label><input type="radio" name="budget" value="8" />8</label></div><p class="field-help">This changes how many recurrent state updates the substrate performs — recurrent computation budget, not "thinking depth."</p></fieldset>
+            <button class="run-button" id="run-button" type="submit">Run experiment <span aria-hidden="true">→</span></button>
+            <p class="form-status" id="form-status" role="status" aria-live="polite">Ready to run.</p>
+          </form>
+          <section class="observation-panel" aria-labelledby="state-title">
+            <div class="panel-heading"><div><p class="eyebrow">OBSERVABILITY</p><h3 id="state-title">Computation state</h3></div><span id="evidence-badge" class="evidence-badge">NOT YET RUN</span></div>
+            <p id="state-description" class="panel-copy">Numerical state telemetry is not a human-readable thought or explanation.</p>
+            <div id="state-empty" class="empty-state">Run the experiment to render contract-provided state observations.</div>
+            <p id="vector-scale" class="field-help" hidden></p>
+            <label id="scrubber-label" for="state-scrubber" hidden>State step</label><input id="state-scrubber" type="range" min="0" max="0" value="0" hidden aria-describedby="scrubber-description" /><p id="scrubber-description" class="field-help" hidden>Selects an already returned state; it does not rerun the model.</p>
+            <div id="state-heatmap" class="state-heatmap" hidden aria-label="Illustrative signed heatmap of returned state values"></div>
+            <ol id="state-list" class="state-list" aria-label="Initial state and computation steps"></ol>
+            <section id="state-inspector" class="state-inspector" aria-labelledby="inspector-title" hidden>
+              <h4 id="inspector-title">State inspector</h4><p id="inspector-description" class="field-help"></p>
+              <div class="table-scroll" tabindex="0" role="region" aria-label="All state dimension values"><table><caption>All dimensions (zero-based indices)</caption><thead><tr><th scope="col">Dimension</th><th scope="col">Value</th></tr></thead><tbody id="state-values"></tbody></table></div>
+            </section>
+          </section>
+        </div>
+      </section>
+      <section class="equation-panel" id="hierarchy-panel" aria-labelledby="hierarchy-title" hidden><div><p class="eyebrow">LIVE STATE / HRM-INSPIRED</p><h2 id="hierarchy-title">Two actual numerical state trajectories</h2></div><p id="hierarchy-description">When selected, the local hierarchical backend returns a low-level state every update and a high-level state at cycle boundaries.</p><div class="table-scroll" tabindex="0" role="region" aria-label="Hierarchical state update timeline"><table><caption>Returned high and low state update schedule</caption><thead><tr><th scope="col">Step</th><th scope="col">Low state</th><th scope="col">High state</th><th scope="col">High update</th></tr></thead><tbody id="hierarchy-body"></tbody></table></div><p class="field-help">The displayed state coordinates are numerical values, not labels such as planning or memory. The local output head reads the high-level state.</p></section>
+      <section class="equation-panel bdh-panel" id="bdh-panel" aria-labelledby="bdh-title" hidden><div><p class="eyebrow">LIVE LOCAL / BDH-CQ-INSPIRED</p><h2 id="bdh-title">Memory builds before the query works</h2></div><p id="bdh-description">Demonstrations update S sequentially. The final S conditions H₀; shared H updates then produce the final local prediction.</p><div class="bdh-flow" aria-label="BDH-CQ-inspired local computation flow"><span>DEMONSTRATIONS</span><b>→</b><span>S MEMORY</span><b>→</b><span>H₀ QUERY WORKSPACE</span><b>→</b><span>H UPDATES</span><b>→</b><span>OUTPUT</span></div><div class="table-scroll" tabindex="0" role="region" aria-label="Returned memory and workspace state timeline"><table><caption>Actual BDH-CQ-inspired local telemetry</caption><thead><tr><th scope="col">Stage</th><th scope="col">Step</th><th scope="col">State values</th><th scope="col">Status</th></tr></thead><tbody id="bdh-body"></tbody></table></div><p class="field-help">S and H are returned numerical state telemetry, not human-readable thoughts. This is a simplified local implementation, not a reproduction of BDH-CQ.</p></section>
+      <section class="equation-panel" aria-labelledby="equation-title"><div><p class="eyebrow">ILLUSTRATIVE / MATHEMATICAL RULE</p><h2 id="equation-title">The rule stays fixed</h2></div><p id="selected-state-rule">Current state: not yet selected.</p><code>h₀ = tanh(W_encode x + b_encode)</code><code>hₜ₊₁ = tanh(W_h hₜ + W_x x + b_h)</code><code>prediction = argmax(W_out hₙ + b_out)</code><p>The selected state changes; the shared recurrence equation does not.</p></section>
+      <section class="result-section" aria-labelledby="result-title">
+        <div class="section-heading"><div><p class="eyebrow">02 / EVALUATION</p><h2 id="result-title">Truth vs estimate</h2></div><p class="status-chip" id="execution-status">AWAITING EXECUTION</p></div>
+        <div id="result-empty" class="empty-state result-empty">No execution result yet. Ground truth is evaluated independently of the prediction.</div>
+        <div class="result-grid" id="result-grid" hidden>
+          <article class="result-card estimate"><p>FINAL PREDICTION</p><strong id="prediction">—</strong><span id="prediction-detail">Awaiting execution</span></article>
+          <article class="result-card truth"><p>GROUND TRUTH</p><strong id="ground-truth">—</strong><span>Independent deterministic task solver</span></article>
+          <article class="result-card verdict"><p>RESULT</p><strong id="correct">—</strong><span id="correct-detail">Awaiting evaluation</span></article>
+          <article class="telemetry-card"><p>EXECUTION TELEMETRY</p><dl><div><dt>Evidence</dt><dd id="telemetry-evidence">—</dd></div><div><dt>Computation steps</dt><dd id="telemetry-steps">—</dd></div><div><dt>Execution status</dt><dd id="telemetry-status">—</dd></div><div><dt>Latency</dt><dd id="telemetry-latency">—</dd></div><div><dt>Random seed</dt><dd id="telemetry-seed">—</dd></div><div><dt>Token count</dt><dd id="telemetry-tokens">Not reported</dd></div></dl></article>
+        </div>
+        <details id="provenance-panel" class="provenance-panel" hidden><summary>Configuration and provenance</summary><p id="provenance-description"></p><p id="latency-scope" class="field-help"></p><pre id="configuration"></pre></details>
+        <section id="comparison" class="comparison" aria-labelledby="comparison-title" hidden>
+          <h3 id="comparison-title">Reasoning budget experiment</h3><p id="comparison-context" class="field-help"></p><p class="field-help">Controlled conditions: same task, encoding, seed, hidden size, recurrent transition, output head, reference solver, precision, and backend. Only recurrent update budget varies.</p><button id="repeat-sweep" type="button">Repeat this live sweep</button><p class="field-help">Local timing is telemetry, not a benchmark. This small untrained substrate can be non-monotonic; more updates do not guarantee correctness.</p>
+          <p id="comparison-status" class="form-status" role="status" aria-live="polite"></p>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Budget comparison results"><table><caption>Independent executions for each computation budget</caption><thead><tr><th scope="col">Budget</th><th scope="col">Prediction</th><th scope="col">Ground truth</th><th scope="col">Correctness</th><th scope="col">Steps</th><th scope="col">Latency</th></tr></thead><tbody id="comparison-body"></tbody></table></div>
+          <div id="comparison-insight" class="claim-panel" hidden></div>
+        </section>
+        <section id="characterization" class="comparison" aria-labelledby="characterization-title">
+          <p class="evidence-word">LOCAL CHARACTERIZATION — NOT A BENCHMARK</p>
+          <h3 id="characterization-title">Does the phenomenon survive a change of parameters?</h3>
+          <p class="field-help">The canonical example above uses one fixed parameter seed. Changed: parameter seed only. Held fixed: task, budgets, architecture, and reference solver. This runs 5 parameter seeds × 4 budgets = 20 live executions of the same recurrent architecture — every result is kept, including incorrect and non-monotonic ones. It is not a claim that any seed is representative.</p>
+          <button id="run-characterization" type="button">Run local seed characterization</button>
+          <p id="characterization-status" class="form-status" role="status" aria-live="polite">Not yet run.</p>
+          <p id="characterization-summary" class="field-help" hidden></p>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Seed characterization results" id="characterization-table-wrap" hidden>
+            <table><caption>Prediction by seed and budget (ground truth shown once per row)</caption><thead><tr><th scope="col">Seed</th><th scope="col">B1</th><th scope="col">B2</th><th scope="col">B4</th><th scope="col">B8</th><th scope="col">Truth</th><th scope="col">Correct count</th></tr></thead><tbody id="characterization-body"></tbody></table>
+          </div>
+        </section>
+      </section>
+      <section class="research-section" id="research" aria-labelledby="research-title">
+        <div><p class="eyebrow">07 / RESEARCH LINEAGE</p><h2 id="research-title">Research belongs beside the experiment.</h2><p>LatentForge separates what papers report from what this local laboratory actually executes.</p></div>
+        <h3 class="research-row-title">HRM-inspired mode</h3>
+        <div class="research-grid"><article><p class="evidence-word">PUBLISHED</p><h3>Coupled two-level recurrence</h3><p>Wang et al. describe coupled high- and low-level recurrent modules updating at different cadences, with output read from the high-level state.</p></article><article><p class="evidence-word">LIVE LOCAL</p><h3>A simplified H/L recurrence</h3><p>This lab runs a deterministic, untrained local H/L recurrence and returns both numerical trajectories.</p></article><article><p class="evidence-word">SIMPLIFIED</p><h3>Not a paper reproduction</h3><p>No published training, deep supervision, gradient approximation, adaptive computation, datasets, or benchmarks are reproduced here.</p></article><article><p class="evidence-word">NOT CLAIMED</p><h3>Not HRM itself</h3><p>This does not establish HRM superiority, benchmark performance, efficiency, or general accuracy improvement.</p></article></div>
+        <h3 class="research-row-title">BDH-CQ-inspired mode</h3>
+        <div class="research-grid"><article><p class="evidence-word">PUBLISHED</p><h3>Recurrent memory, then latent workspace</h3><p>Engdahl et al. describe demonstrations updating S, a query-conditioned H₀, iterative H computation, and final-state decoding.</p></article><article><p class="evidence-word">LIVE LOCAL</p><h3>One inspectable simplification</h3><p>This lab runs deterministic CPU updates for S and H and returns their numerical trajectories, prediction, and independent truth.</p></article><article><p class="evidence-word">SIMPLIFIED</p><h3>Not a paper reproduction</h3><p>No published training, hidden dimensions, proprietary rules, ARC evaluation, benchmark results, ranking, or efficiency claim is reproduced here.</p></article><article><p class="evidence-word">NOT CLAIMED</p><h3>More state is not a guarantee</h3><p>A small untrained local result cannot establish superiority, general accuracy, cost, token savings, or human-like reasoning.</p></article></div>
+        <ul class="lineage-list"><li><span>01</span> Recurrent latent state</li><li><span>02</span> Hierarchical cadence</li><li><span>03</span> Demonstration-conditioned memory</li><li><span>04</span> Independent truth check</li></ul>
+      </section>
+    </main>
+    <footer><span>LatentForge — An Interactive Laboratory for Recurrent Latent Reasoning</span><span>LIVE LOCAL COMPUTATION / NO EXTERNAL MODEL PROVIDERS</span></footer>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

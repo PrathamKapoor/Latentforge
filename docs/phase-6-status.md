@@ -1,0 +1,24 @@
+# Phase 6 Status
+
+- [x] Source verification
+- [x] Design contract
+- [x] Runner
+- [x] Backend
+- [x] Backend registration
+- [x] Reasoning-budget support
+- [x] S/H independence verification
+- [x] Demonstration-count sweep
+- [x] Sweep tests
+- [x] API integration
+- [x] API tests
+- [x] Canonical guided-state extension
+- [x] Guided-state tests
+- [x] Browser UI
+- [x] Research Explorer
+- [x] Documentation
+- [x] Full npm test
+- [x] Build
+- [x] Manual HTTP
+- [x] Phase 4 regression
+- [x] Final claim/evidence/scope audit
+- [ ] FROZEN

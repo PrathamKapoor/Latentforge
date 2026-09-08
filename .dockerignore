@@ -1,0 +1,14 @@
+.git
+.superpowers
+docs
+research
+test
+node_modules
+*.log
+*.out
+*.err
+npm-debug.log*
+.DS_Store
+Dockerfile
+.dockerignore
+README.md
