@@ -14,7 +14,7 @@ test('uses an explicit PYTHON executable without probing fallbacks', async () =>
   });
 
   assert.equal(python, 'C:/Python/python.exe');
-  assert.deepEqual(calls, [['C:/Python/python.exe', ['-c', 'import sys; assert (3, 10) <= sys.version_info[:2] <= (3, 11); import torch; print(sys.executable)']]]);
+  assert.deepEqual(calls, [['C:/Python/python.exe', ['-c', 'import sys; assert (3, 10) <= sys.version_info[:2] <= (3, 13); import torch; print(sys.executable)']]]);
 });
 
 test('falls back to the Windows launcher when python is not on PATH', async () => {
@@ -30,18 +30,21 @@ test('falls back to the Windows launcher when python is not on PATH', async () =
     },
   });
 
+  const probeCode = 'import sys; assert (3, 10) <= sys.version_info[:2] <= (3, 13); import torch; print(sys.executable)';
   assert.equal(python, 'C:/Python310/python.exe');
   assert.deepEqual(calls, [
-    ['C:\\no-venv\\.venv\\Scripts\\python.exe', ['-c', 'import sys; assert (3, 10) <= sys.version_info[:2] <= (3, 11); import torch; print(sys.executable)']],
-    ['python', ['-c', 'import sys; assert (3, 10) <= sys.version_info[:2] <= (3, 11); import torch; print(sys.executable)']],
-    ['py', ['-3.11', '-c', 'import sys; assert (3, 10) <= sys.version_info[:2] <= (3, 11); import torch; print(sys.executable)']],
-    ['py', ['-3.10', '-c', 'import sys; assert (3, 10) <= sys.version_info[:2] <= (3, 11); import torch; print(sys.executable)']],
+    ['C:\\no-venv\\.venv\\Scripts\\python.exe', ['-c', probeCode]],
+    ['python', ['-c', probeCode]],
+    ['py', ['-3.13', '-c', probeCode]],
+    ['py', ['-3.12', '-c', probeCode]],
+    ['py', ['-3.11', '-c', probeCode]],
+    ['py', ['-3.10', '-c', probeCode]],
   ]);
 });
 
 test('reports a configuration-safe error when no supported interpreter is available', async () => {
   await assert.rejects(
     () => resolvePython({ environment: {}, cwd: 'C:/no-venv', probe: async () => { throw new Error('not found'); } }),
-    /requires Python 3\.10 or 3\.11/u,
+    /requires Python 3\.10-3\.13/u,
   );
 });

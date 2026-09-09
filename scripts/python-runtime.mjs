@@ -3,15 +3,20 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 
 const execFile = promisify(execFileCallback);
-const probeCode = 'import sys; assert (3, 10) <= sys.version_info[:2] <= (3, 11); import torch; print(sys.executable)';
+// Range verified working, not merely asserted: 3.10 locally (this repo's own
+// .venv) and 3.13 in CI (github.com/PrathamKapoor/Latent-forge/actions,
+// runs #1-4) both installed torch==2.13.0 from requirements.txt and passed
+// the full suite. 3.11/3.12 are included as the contiguous versions between
+// two verified-good ones, not independently confirmed.
+const probeCode = 'import sys; assert (3, 10) <= sys.version_info[:2] <= (3, 13); import torch; print(sys.executable)';
 
 export async function resolvePython({ platform = process.platform, environment = process.env, cwd = process.cwd(), probe = defaultProbe } = {}) {
   const venvPython = platform === 'win32' ? join(cwd, '.venv', 'Scripts', 'python.exe') : join(cwd, '.venv', 'bin', 'python');
   const candidates = environment.PYTHON
     ? [{ command: environment.PYTHON, prefix: [] }]
     : platform === 'win32'
-      ? [{ command: venvPython, prefix: [] }, { command: 'python', prefix: [] }, { command: 'py', prefix: ['-3.11'] }, { command: 'py', prefix: ['-3.10'] }]
-      : [{ command: venvPython, prefix: [] }, { command: 'python3.11', prefix: [] }, { command: 'python3.10', prefix: [] }, { command: 'python3', prefix: [] }, { command: 'python', prefix: [] }];
+      ? [{ command: venvPython, prefix: [] }, { command: 'python', prefix: [] }, { command: 'py', prefix: ['-3.13'] }, { command: 'py', prefix: ['-3.12'] }, { command: 'py', prefix: ['-3.11'] }, { command: 'py', prefix: ['-3.10'] }]
+      : [{ command: venvPython, prefix: [] }, { command: 'python3.13', prefix: [] }, { command: 'python3.12', prefix: [] }, { command: 'python3.11', prefix: [] }, { command: 'python3.10', prefix: [] }, { command: 'python3', prefix: [] }, { command: 'python', prefix: [] }];
 
   for (const candidate of candidates) {
     try {
@@ -19,7 +24,7 @@ export async function resolvePython({ platform = process.platform, environment =
       if (executable) return executable;
     } catch { /* try the next supported interpreter */ }
   }
-  throw new Error('LatentForge requires Python 3.10 or 3.11 with CPU PyTorch. Create .venv with requirements.txt or set PYTHON to that executable.');
+  throw new Error('LatentForge requires Python 3.10-3.13 with CPU PyTorch. Create .venv with requirements.txt or set PYTHON to that executable.');
 }
 
 async function defaultProbe(command, args) {

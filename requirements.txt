@@ -5,5 +5,7 @@
 #   pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 #
 # Pinned to the version verified against this repository's fixed-seed
-# outputs (see docs/phase-7-baseline-evidence.md). Requires Python >=3.11,<3.14.
+# outputs (see docs/phase-7-baseline-evidence.md). Verified working on
+# Python 3.10 (local .venv) and 3.13 (CI); 3.11/3.12 are the contiguous
+# range between those two verified points, not independently confirmed.
 torch==2.13.0
