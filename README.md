@@ -177,7 +177,7 @@ There are no silent fallbacks between evidence categories. If a live runner fail
 
 ### Prerequisites
 - **Node.js**: `v24.0.0` or higher
-- **Python**: `3.11` to `3.13`
+- **Python**: `3.10` or `3.11` (required by the pinned CPU-only PyTorch wheel)
 - **PyTorch**: `2.13.0+cpu` (CPU-only wheel; no GPU or CUDA required)
 
 ### Step-by-Step Installation
@@ -193,13 +193,24 @@ There are no silent fallbacks between evidence categories. If a live runner fail
    npm install
    ```
 
-3. **Install Python dependencies:**
-   ```bash
-   pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
-   ```
+3. **Create an isolated Python environment and install dependencies:**
+    ```bash
+    # macOS / Linux
+    python3.11 -m venv .venv
+    . .venv/bin/activate
+
+    # Windows PowerShell (if `python` is not on PATH)
+    # py -3.10 -m venv .venv
+    # .\.venv\Scripts\Activate.ps1
+
+    python -m pip install --upgrade pip
+    python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+    ```
+    `npm test`, `npm run build`, and `npm run dev` automatically prefer `.venv`.
+    Set `PYTHON` to an absolute interpreter path if the environment lives elsewhere.
 
 4. **Verify the installation:**
-   Run the complete automated test suite (83 unit, integration, and contract tests):
+    Run the complete automated test suite:
    ```bash
    npm test
    ```
@@ -244,6 +255,7 @@ Runtime parameters and queue limits can be adjusted via environment variables:
 |:---|:---:|:---|
 | `PORT` | `4173` | Local HTTP server port |
 | `PYTHON` | `python` | Python executable used to spawn the persistent worker |
+| `LATENTFORGE_REQUEST_TIMEOUT_MS` | `20000` | Upper bound for an HTTP request; a timed-out request returns `504 REQUEST_TIMEOUT` |
 | `LATENTFORGE_MAX_QUEUE` | `8` | Maximum queued experiment jobs before returning `503 OVERLOADED` |
 | `LATENTFORGE_MAX_ACTIVE` | `1` | Concurrently active jobs (kept at 1 for CPU-bound PyTorch consistency) |
 | `LATENTFORGE_WORKER_START_TIMEOUT_MS` | `30000` | Allowed worker startup window before timing out |

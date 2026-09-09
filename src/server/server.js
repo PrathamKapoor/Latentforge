@@ -10,7 +10,7 @@ import { buildBdhCqInspiredResult } from '../reasoning/bdh-cq-inspired-backend.j
 import { runReasoningBudgetSweep } from '../experiments/reasoning-budget-sweep.js';
 import { runSeedCharacterization, ALL_CHARACTERIZATION_SEEDS } from '../experiments/seed-characterization.js';
 import { encodeLineNavigationTask } from '../reasoning/line-navigation-task.js';
-import { MAX_BODY_BYTES } from './config.js';
+import { MAX_BODY_BYTES, REQUEST_TIMEOUT_MS } from './config.js';
 
 const publicRoot = fileURLToPath(new URL('../../public/', import.meta.url));
 const MIME_TYPES = { '.css': 'text/css; charset=utf-8', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
@@ -25,9 +25,32 @@ const LIVE_RESULT_BUILDERS = Object.freeze({
   'bdh-cq-inspired': buildBdhCqInspiredResult,
 });
 
-export function createServer() {
+export function createServer({ requestTimeoutMs = REQUEST_TIMEOUT_MS } = {}) {
   return createHttpServer(async (request, response) => {
+    let timeout;
     try {
+      await Promise.race([
+        handleRequest(request, response),
+        new Promise((_, reject) => {
+          timeout = setTimeout(() => reject(Object.assign(new Error('The experiment timed out. Please try again.'), { code: 'REQUEST_TIMEOUT' })), requestTimeoutMs);
+        }),
+      ]);
+    } catch (error) {
+      const status = error.code === 'VALIDATION_ERROR' ? 400
+        : error.code === 'UNSUPPORTED_TASK' ? 400
+        : error.code === 'SERVICE_UNAVAILABLE' || error.code === 'RUNTIME_UNAVAILABLE' ? 503
+        : error.code === 'OVERLOADED' ? 503
+        : error.code === 'REQUEST_TIMEOUT' ? 504
+        : 500;
+      const message = status === 500 ? 'The demonstration could not be completed. Please try again.' : error.message;
+      return sendJson(response, status, { error: { code: error.code || 'EXECUTION_ERROR', message } });
+    } finally {
+      clearTimeout(timeout);
+    }
+  });
+}
+
+async function handleRequest(request, response) {
       if (request.method === 'GET' && request.url === '/health') {
         return sendJson(response, 200, { status: 'ok' });
       }
@@ -49,16 +72,6 @@ export function createServer() {
       }
       if (request.method !== 'GET' && request.method !== 'HEAD') return sendJson(response, 405, { error: { code: 'METHOD_NOT_ALLOWED', message: 'Method not allowed.' } });
       return await serveStatic(request.url, response, request.method === 'HEAD');
-    } catch (error) {
-      const status = error.code === 'VALIDATION_ERROR' ? 400
-        : error.code === 'UNSUPPORTED_TASK' ? 400
-        : error.code === 'SERVICE_UNAVAILABLE' || error.code === 'RUNTIME_UNAVAILABLE' ? 503
-        : error.code === 'OVERLOADED' ? 503
-        : 500;
-      const message = status === 500 ? 'The demonstration could not be completed. Please try again.' : error.message;
-      return sendJson(response, status, { error: { code: error.code || 'EXECUTION_ERROR', message } });
-    }
-  });
 }
 
 /**
@@ -188,6 +201,7 @@ async function serveStatic(url, response, headOnly) {
 }
 
 function sendJson(response, status, body) {
+  if (response.writableEnded || response.destroyed) return;
   response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'x-content-type-options': 'nosniff' });
   response.end(JSON.stringify(body));
 }

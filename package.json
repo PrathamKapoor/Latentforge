@@ -5,10 +5,10 @@
   "description": "An Interactive Laboratory for Recurrent Latent Reasoning",
   "type": "module",
   "scripts": {
-    "test": "node --test --test-concurrency=4",
-    "dev": "node src/server/index.js",
-    "start": "node src/server/index.js",
-    "build": "node --check src/contracts/reasoning-backend.js && node --check src/reasoning/synthetic-demo-backend.js && node --check src/reasoning/recurrent-latent-backend.js && node --check src/reasoning/hrm-inspired-backend.js && node --check src/reasoning/bdh-cq-inspired-backend.js && node --check src/reasoning/worker-client.js && node --check src/experiments/reasoning-budget-sweep.js && node --check src/experiments/hierarchical-comparison.js && node --check src/experiments/bdh-cq-demonstration-sweep.js && node --check src/experiments/seed-characterization.js && node --check src/ui/guided-experience.js && node --check public/guided-experience.js && node --check src/server/config.js && node --check src/server/server.js && node --check src/server/index.js && node --check public/app.js && python -m py_compile src/reasoning/recurrent-runner.py src/reasoning/hrm-inspired-runner.py src/reasoning/bdh-cq-inspired-runner.py src/reasoning/worker-server.py"
+    "test": "node scripts/test.mjs",
+    "dev": "node scripts/start.mjs",
+    "start": "node scripts/start.mjs",
+    "build": "node scripts/build.mjs"
   },
   "engines": {
     "node": ">=24"

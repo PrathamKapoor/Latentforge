@@ -3,7 +3,7 @@
 # PyTorch, or Node themselves. CPU-only throughout (no CUDA/GPU dependency —
 # see requirements.txt).
 
-FROM node:24-slim
+FROM node:24-bookworm-slim
 
 # python3, pip, and venv for the persistent worker (src/reasoning/worker-server.py);
 # installed without --no-install-recommends so ensurepip wheels (python3-pip-whl)
