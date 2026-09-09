@@ -1,5 +1,5 @@
 import { execFile as execFileCallback, spawn } from 'node:child_process';
-import { join } from 'node:path';
+import path from 'node:path';
 import { promisify } from 'node:util';
 
 const execFile = promisify(execFileCallback);
@@ -11,6 +11,12 @@ const execFile = promisify(execFileCallback);
 const probeCode = 'import sys; assert (3, 10) <= sys.version_info[:2] <= (3, 13); import torch; print(sys.executable)';
 
 export async function resolvePython({ platform = process.platform, environment = process.env, cwd = process.cwd(), probe = defaultProbe } = {}) {
+  // Use the path flavor matching the *simulated* platform (the `platform`
+  // parameter), not the ambient `node:path` join tied to the real host OS —
+  // otherwise this function is only actually testable on the OS it's
+  // running on, since `path.join('C:/x', 'y')` produces backslashes on
+  // Windows but forward slashes on Linux/macOS regardless of `platform`.
+  const join = platform === 'win32' ? path.win32.join : path.posix.join;
   const venvPython = platform === 'win32' ? join(cwd, '.venv', 'Scripts', 'python.exe') : join(cwd, '.venv', 'bin', 'python');
   const candidates = environment.PYTHON
     ? [{ command: environment.PYTHON, prefix: [] }]
