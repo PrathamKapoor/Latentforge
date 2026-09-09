@@ -25,7 +25,21 @@ jobs:
         run: npm ci
 
       - name: Test
-        run: npm test
+        run: |
+          set +e
+          npm test > test-output.log 2>&1
+          code=$?
+          if [ $code -ne 0 ]; then
+            echo "----- npm test output (tail) -----"
+            tail -n 200 test-output.log
+            tail -n 60 test-output.log | while IFS= read -r line; do
+              esc=$(printf '%s' "$line" | sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g')
+              echo "::error::$esc"
+            done
+          else
+            tail -n 40 test-output.log
+          fi
+          exit $code
 
       - name: Build (syntax check)
         run: npm run build
