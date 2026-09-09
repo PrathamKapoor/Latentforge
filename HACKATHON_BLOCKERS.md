@@ -44,6 +44,50 @@ not assumption:
 - **Frontend XSS surface** — `grep` confirms `public/app.js` renders all server-derived data via `textContent`/DOM APIs; zero uses of `innerHTML`/`insertAdjacentHTML`.
 - **Secret scan** — no `.env`, credentials, API keys, or private keys in tracked files or `.gitignore` bypass; `.gitignore` already excludes the plausible secret paths.
 
+## B11 — found and fixed after the initial pass (real CI failure, not fabricated)
+
+Pushing the B1-B4 fixes above triggered a real, reproducible CI failure
+(GitHub Actions run #5, commit `484dd37`) that did not exist locally. This
+sandbox has no `gh` CLI and no GitHub token — raw job logs return `403`
+even for this public repo — so root-causing it required an unusual path,
+documented here in full because it is the kind of gap the "trust but
+verify" standard in this pass exists to catch:
+
+1. First hypothesis (wrong, but disclosed): assumed CI's Python 3.11 (a
+   pre-existing uncommitted change this pass inherited and committed) was
+   somehow the cause, reverted to 3.13. **Still failed** — this disproved
+   the hypothesis rather than confirming it, and the failed hypothesis is
+   recorded rather than quietly dropped.
+2. Added a temporary CI diagnostic step that, on test failure, emits the
+   actual failing output as `::error::` GitHub Actions annotations —
+   annotations, unlike logs, are readable via the unauthenticated public
+   Checks API. First attempt tailed the last 60 lines of output, which
+   GitHub's ~10-annotation cap turned into 10 *passing*-test lines (the
+   real failure was earlier in the log) — a dead end that is also kept
+   here rather than erased, since it shaped the next fix.
+3. Retargeted the diagnostic at the first `✖`/`not ok` line instead of the
+   tail. This surfaced the actual failure: `✖ falls back to the Windows
+   launcher when python is not on PATH`.
+4. Root cause: `scripts/python-runtime.mjs` imported `join` directly from
+   `node:path`, which is bound to the *real* host OS. The test simulates
+   Windows (`platform: 'win32'`) and hardcodes the backslash path that
+   code produces when it *actually* runs on Windows. On GitHub's
+   `ubuntu-latest` runner, `join()` is POSIX and always emits forward
+   slashes regardless of the `platform` parameter, so the assertion could
+   only ever pass on a Windows CI runner — a genuine, deterministic
+   cross-platform bug, not a flake.
+5. Fixed by selecting `path.win32.join` / `path.posix.join` explicitly
+   based on the `platform` parameter instead of the ambient import
+   (no-op for real production runs on either OS; only changes the
+   simulated-cross-platform test path — which was the bug).
+
+**Verified, not asserted:** GitHub Actions run for commit `6c5f914`
+completed with `test: success` and `docker: success` — the Docker image
+built and the full container smoke test (`/health`, `/ready`,
+`/api/experiment` against a live container on a real Linux runner) passed.
+This closes out what was previously an honest `NOT VERIFIED` (B10 below,
+Docker/CI) into a verified `PASS`, with a real run as the evidence.
+
 ## Open items (not fixed — documented honestly per the "absolute honesty" rule)
 
 | ID | Severity | Area | Status | Why not fixed this pass |
@@ -53,7 +97,8 @@ not assumption:
 | B7 | P3 | Versioning | `package.json` version is `0.0.0-phase0` — internal phase-tracking residue, not user-facing, but reads oddly for a "release." | Cosmetic; left to the final polish pass. |
 | B8 | NOT VERIFIED | Browser/visual | No browser-automation tool is available in this execution environment. DOM construction, ARIA structure, `textContent`-only rendering, and all UI *logic* are covered by `test/frontend-shell.test.js`, `test/phase3-experience.test.js`, etc. (jsdom-level), but actual pixel rendering, mobile viewport behavior, and real click-through were not visually observed this pass. | Environment limitation, not skipped effort. Static markup review (see below) found no structural red flags. |
 | B9 | NOT VERIFIED | Accessibility | Static review of `public/index.html` shows skip link, `aria-label`/`aria-live`/`role=status` on dynamic regions, `<label for>` on every input, `<fieldset>/<legend>` on radio groups, table `<caption>`/`scope=col`. Color contrast and screen-reader behavior were not tested live (no browser tool). | Same environment limitation as B8. |
-| B10 | NOT VERIFIED | Public deployment | Docker is not installed in this local execution environment (confirmed: `docker --version` → command not found), so the container could not be built/run locally. GitHub Actions CI *does* have Docker and has run the exact `docker build && docker run && curl /health && curl /ready && curl /api/experiment` smoke test in `.github/workflows/ci.yml` — green on all runs prior to this pass; this pass's run was in progress in-session, see CI status below. A public, internet-reachable deployment additionally requires either (a) Railway OAuth authorization from the user (this session's Railway MCP connector is installed but unauthenticated — `/mcp` must be run by the user, an agent cannot complete OAuth), or (b) an architecturally-mismatched Vercel deployment (this session's connected Vercel account belongs to an unrelated GitHub org/team, and Vercel's serverless model cannot host a persistent single-slot PyTorch worker process the way this app is designed). | Hard environment/access limitation, documented rather than glossed over. |
+| B10a | VERIFIED | Docker/CI | Docker is not installed in this local sandbox (confirmed: `docker --version` → command not found), so the container could not be built/run locally. | Resolved via CI, not locally: GitHub Actions run for commit `6c5f914` shows `docker: success` — image built, container started, and `/health`, `/ready`, `/api/experiment` all responded correctly against the live container on a real `ubuntu-latest` runner. See B11 above. |
+| B10b | NOT VERIFIED — needs one human action | Public deployment | This app's architecture (persistent single-slot PyTorch worker) needs a Docker/persistent-process host. The Railway MCP connector in this session is installed but unauthenticated (OAuth must be completed by a human via `/mcp` → "claude.ai Railway" — an agent cannot do this step). The alternative available connector, Vercel, is both a poor architectural fit (serverless, no persistent child-process worker across requests) and connected to an unrelated GitHub org's account, not this repository owner's. | Hard access limitation outside agent control, not effort skipped. Deployable the moment Railway is authorized — the Dockerfile and CI smoke test are already proven. |
 
 ## Scientific integrity check
 
