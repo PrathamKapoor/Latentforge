@@ -1,6 +1,6 @@
 {
   "name": "latentforge",
-  "version": "0.0.0-phase0",
+  "version": "1.0.0",
   "private": true,
   "description": "An Interactive Laboratory for Recurrent Latent Reasoning",
   "type": "module",
