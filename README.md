@@ -7,7 +7,9 @@ LatentForge is a lightweight, fully local web application and research laborator
 The project provides a transparent, deterministic environment where learners and researchers can inspect latent trajectories step-by-step, manipulate computation budgets, and compare predictions against independently verified ground truth.
 
 ## Try It
+The website is currently live on: https://latentforge.onrender.com/
 
+you can also try this locally
 ```bash
 git clone https://github.com/PrathamKapoor/Latentforge.git && cd Latentforge
 npm install
