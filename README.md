@@ -9,14 +9,16 @@ The project provides a transparent, deterministic environment where learners and
 ## Try It
 
 ```bash
-git clone https://github.com/PrathamKapoor/Latent-forge.git && cd Latent-forge
+git clone https://github.com/PrathamKapoor/Latentforge.git && cd Latentforge
 npm install
 python3.10 -m venv .venv && . .venv/bin/activate   # or py -3.10 -m venv .venv on Windows
 python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 npm run dev
 ```
 
-Open `http://127.0.0.1:4173` — the flagship result is the first thing on the page.
+Open `http://127.0.0.1:4173` for the overview, or go straight to the interactive laboratory at `http://127.0.0.1:4173/lab` — the flagship result is its first section.
+
+No API keys, accounts, or external model providers are needed: every experiment runs locally on CPU.
 
 ## Flagship Result: A Trained Model, a Held-Out Length Test
 
@@ -210,7 +212,8 @@ LatentForge draws inspiration from several published research papers while maint
 | **Flagship: Variable-Length Task + Held-Out Split** | Implemented | `research/flagship/task.py`, `src/reasoning/variable-length-navigation-task.js`, `test/variable-length-navigation-task.test.js` |
 | **Flagship: One-Shot Baseline** | Implemented | `research/flagship/model.py` (`OneShotBaseline`), `results/flagship-experiment.json` |
 | **Flagship: Results UI (budget/length charts)** | Implemented | `public/flagship.js`, `GET /api/flagship-results` |
-| **Browser Application Shell & UI** | Implemented | `public/index.html`, `public/app.js`, `public/styles.css` |
+| **Landing Page (`/`)** | Implemented | `public/index.html`, `public/landing.js`, `public/css/landing.css`, `test/landing-shell.test.js` |
+| **Browser Application Shell & UI (`/lab`)** | Implemented | `public/lab.html`, `public/app.js`, `public/site.js`, `public/css/`, `test/frontend-shell.test.js` |
 | **Guided Learning Experience** | Implemented | `public/guided-experience.js`, `test/phase3-experience.test.js` |
 | **Node.js HTTP Server & API** | Implemented | `src/server/server.js`, `test/api.test.js` |
 | **Persistent Python Worker** | Implemented | `src/reasoning/worker-server.py`, `src/reasoning/worker-client.js` |
@@ -255,8 +258,8 @@ There are no silent fallbacks between evidence categories. If a live runner fail
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/PrathamKapoor/Latent-forge.git
-   cd Latent-forge
+   git clone https://github.com/PrathamKapoor/Latentforge.git
+   cd Latentforge
    ```
 
 2. **Install Node dependencies:**
@@ -294,7 +297,7 @@ There are no silent fallbacks between evidence categories. If a live runner fail
    ```bash
    npm run dev
    ```
-   Open your browser at `http://127.0.0.1:4173`.
+   Open your browser at `http://127.0.0.1:4173` (overview) or `http://127.0.0.1:4173/lab` (interactive laboratory).
 
 ---
 
@@ -320,11 +323,12 @@ curl -f http://127.0.0.1:4173/ready
 
 ## Configuration & Resource Limits
 
-Runtime parameters and queue limits can be adjusted via environment variables:
+Runtime parameters and queue limits can be adjusted via environment variables. All of them are optional, and none are secrets — LatentForge needs no API keys. [`.env.example`](.env.example) lists every variable with its default; the server reads the process environment and does not load `.env` files itself, so export the variables in your shell or pass the file to Docker with `docker run --env-file .env ...`.
 
 | Variable | Default | Purpose |
 |:---|:---:|:---|
 | `PORT` | `4173` | Local HTTP server port |
+| `HOST` | `0.0.0.0` | Interface the HTTP server binds to (use `127.0.0.1` to keep it local-only) |
 | `PYTHON` | `python` | Python executable used to spawn the persistent worker |
 | `LATENTFORGE_REQUEST_TIMEOUT_MS` | `20000` | Upper bound for an HTTP request; a timed-out request returns `504 REQUEST_TIMEOUT` |
 | `LATENTFORGE_MAX_QUEUE` | `8` | Maximum queued experiment jobs before returning `503 OVERLOADED` |

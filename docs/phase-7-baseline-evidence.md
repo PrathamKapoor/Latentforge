@@ -104,8 +104,7 @@ all three backends through the same `PythonWorkerClient`.
 ## Raw fixture files
 
 Captured verbatim, not reproduced in full here due to size (each 1-3 KB of JSON).
-Retained for this session at:
-`%TEMP%\claude\C--Projects-LatentForge\...\scratchpad\baseline\` —
+Retained locally in a temporary scratch directory during the run —
 `standalone-{recurrent,hrm}-b{1,2,4,8}.json`, `standalone-bdhcq-d2-b4.json`,
 `http-{recurrent,hrm}-b{1,2,4,8}.json`, `http-bdhcq-d2-b4.json`, plus `npm-test.txt`
 and `npm-build.txt` with full command output. These are session-scratch artifacts, not
