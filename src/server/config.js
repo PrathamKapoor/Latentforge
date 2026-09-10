@@ -58,3 +58,24 @@ export const MAX_REASONING_BUDGET = int('LATENTFORGE_MAX_REASONING_BUDGET', 24);
 
 /** Matches the server's existing request-body size cap. */
 export const MAX_BODY_BYTES = int('LATENTFORGE_MAX_BODY_BYTES', 65536);
+
+const bool = (name) => /^(1|true|yes|on)$/iu.test(process.env[name] ?? '');
+
+/**
+ * Per-client request budgets for the public API, as requests per minute.
+ * 0 (the default) disables per-client limiting, which keeps local
+ * development and the test suite unaffected; the global MAX_QUEUE cap
+ * still bounds total load either way. The Docker image and render.yaml
+ * turn these on for public hosting.
+ */
+export const RATE_LIMIT_PER_MINUTE = int('LATENTFORGE_RATE_LIMIT_PER_MINUTE', 0);
+/** Characterization runs 20 executions per request, so it gets its own, smaller budget. */
+export const CHARACTERIZATION_RATE_LIMIT_PER_MINUTE = int('LATENTFORGE_CHARACTERIZATION_RATE_LIMIT_PER_MINUTE', 0);
+
+/**
+ * Set when the server sits behind a reverse proxy (Render, Fly, Railway,
+ * nginx). The client address for rate limiting is then read from the
+ * proxy's X-Forwarded-For header instead of the socket, and HSTS is sent
+ * for requests the proxy received over HTTPS.
+ */
+export const TRUST_PROXY = bool('LATENTFORGE_TRUST_PROXY');

@@ -202,10 +202,23 @@ async function requestLive(attempt = 1) {
   return body;
 }
 
+// A sleeping host (e.g. a free Render instance) takes a while to load
+// PyTorch after waking; poll GET /ready for up to 90 s before running.
+async function waitForWorker(timeoutMs = 90000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try { if ((await fetch('/ready')).ok) return; } catch { /* keep polling */ }
+    setLiveStatus('Starting the local worker… this can take up to a minute on a sleeping host.');
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+}
+
 async function runLive() {
   setLiveStatus('Running a live experiment on the local worker…');
   showLoading();
   try {
+    await waitForWorker();
+    setLiveStatus('Running a live experiment on the local worker…');
     const result = await requestLive();
     renderLive(result);
   } catch (error) {

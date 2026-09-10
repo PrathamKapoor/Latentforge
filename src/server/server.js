@@ -1,5 +1,6 @@
 import { createServer as createHttpServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
+import { gzipSync } from 'node:zlib';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getBackend, validateBackendId } from '../reasoning/backend-registry.js';
@@ -11,7 +12,8 @@ import { buildTrainedRecurrentResult, THINKING_STEPS_TRAIN } from '../reasoning/
 import { runReasoningBudgetSweep } from '../experiments/reasoning-budget-sweep.js';
 import { runSeedCharacterization, ALL_CHARACTERIZATION_SEEDS } from '../experiments/seed-characterization.js';
 import { encodeLineNavigationTask } from '../reasoning/line-navigation-task.js';
-import { MAX_BODY_BYTES, REQUEST_TIMEOUT_MS } from './config.js';
+import { MAX_BODY_BYTES, REQUEST_TIMEOUT_MS, RATE_LIMIT_PER_MINUTE, CHARACTERIZATION_RATE_LIMIT_PER_MINUTE, TRUST_PROXY } from './config.js';
+import { createRateLimiter, clientAddress } from './rate-limiter.js';
 
 const publicRoot = fileURLToPath(new URL('../../public/', import.meta.url));
 const flagshipResultsPath = fileURLToPath(new URL('../../results/flagship-experiment.json', import.meta.url));
@@ -39,8 +41,46 @@ const LIVE_RESULT_BUILDERS = Object.freeze({
   'trained-recurrent': buildTrainedRecurrentResult,
 });
 
-export function createServer({ requestTimeoutMs = REQUEST_TIMEOUT_MS } = {}) {
+// Applied to every response. The pages load only same-origin scripts and
+// Google Fonts, and never use inline <script>/<style> or style attributes.
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  "img-src 'self' data:",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
+
+function applySecurityHeaders(request, response, trustProxy) {
+  response.setHeader('content-security-policy', CONTENT_SECURITY_POLICY);
+  response.setHeader('x-content-type-options', 'nosniff');
+  response.setHeader('x-frame-options', 'DENY');
+  response.setHeader('referrer-policy', 'strict-origin-when-cross-origin');
+  response.setHeader('permissions-policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()');
+  response.setHeader('cross-origin-opener-policy', 'same-origin');
+  if (trustProxy && request.headers['x-forwarded-proto'] === 'https') {
+    response.setHeader('strict-transport-security', 'max-age=15552000');
+  }
+}
+
+export function createServer({
+  requestTimeoutMs = REQUEST_TIMEOUT_MS,
+  rateLimitPerMinute = RATE_LIMIT_PER_MINUTE,
+  characterizationRateLimitPerMinute = CHARACTERIZATION_RATE_LIMIT_PER_MINUTE,
+  trustProxy = TRUST_PROXY,
+} = {}) {
+  const limiters = {
+    '/api/experiment': createRateLimiter({ perMinute: rateLimitPerMinute }),
+    '/api/characterization': createRateLimiter({ perMinute: characterizationRateLimitPerMinute }),
+  };
+  const context = { limiters, trustProxy };
   return createHttpServer(async (request, response) => {
+    applySecurityHeaders(request, response, trustProxy);
     let timeout;
     // Threaded down into pythonWorker.enqueue() so a request timeout doesn't
     // just abandon the promise while the job keeps occupying the worker's
@@ -48,7 +88,7 @@ export function createServer({ requestTimeoutMs = REQUEST_TIMEOUT_MS } = {}) {
     const controller = new AbortController();
     try {
       await Promise.race([
-        handleRequest(request, response, controller.signal),
+        handleRequest(request, response, controller.signal, context),
         new Promise((_, reject) => {
           timeout = setTimeout(() => {
             controller.abort();
@@ -71,7 +111,17 @@ export function createServer({ requestTimeoutMs = REQUEST_TIMEOUT_MS } = {}) {
   });
 }
 
-async function handleRequest(request, response, signal) {
+async function handleRequest(request, response, signal, { limiters, trustProxy }) {
+      // Spend the client's budget before reading the body or touching the
+      // worker, so a flood of requests costs almost nothing to turn away.
+      const limiter = request.method === 'POST' ? limiters[request.url] : undefined;
+      if (limiter?.enabled) {
+        const verdict = limiter.take(clientAddress(request, trustProxy));
+        if (!verdict.allowed) {
+          response.setHeader('retry-after', String(verdict.retryAfterSeconds));
+          return sendJson(response, 429, { error: { code: 'RATE_LIMITED', message: `Too many experiments from your connection. Please wait ${verdict.retryAfterSeconds} seconds and try again.` } });
+        }
+      }
       if (request.method === 'GET' && request.url === '/health') {
         return sendJson(response, 200, { status: 'ok' });
       }
@@ -95,7 +145,7 @@ async function handleRequest(request, response, signal) {
         return sendJson(response, 404, { error: { code: 'NOT_FOUND', message: 'API endpoint not found.' } });
       }
       if (request.method !== 'GET' && request.method !== 'HEAD') return sendJson(response, 405, { error: { code: 'METHOD_NOT_ALLOWED', message: 'Method not allowed.' } });
-      return await serveStatic(request.url, response, request.method === 'HEAD');
+      return await serveStatic(request, response);
 }
 
 /**
@@ -245,16 +295,54 @@ async function readJsonBody(request) {
 // allowed MIME type (see serveStatic).
 const PAGE_ROUTES = Object.freeze({ '/': 'index.html', '/lab': 'lab.html', '/lab/': 'lab.html' });
 
-async function serveStatic(url, response, headOnly) {
-  const pathname = url.split('?')[0];
-  const requestedPath = PAGE_ROUTES[pathname] ?? decodeURIComponent(pathname).replace(/^\/+/, '');
+const COMPRESSIBLE = new Set(['.css', '.html', '.js', '.svg']);
+const GZIP_MIN_BYTES = 1024;
+// Compressed bodies keyed by path + ETag, so each file version is gzipped once.
+const gzipCache = new Map();
+const GZIP_CACHE_MAX = 64;
+
+async function serveStatic(request, response) {
+  const headOnly = request.method === 'HEAD';
+  const pathname = request.url.split('?')[0];
+  let requestedPath;
+  try {
+    requestedPath = PAGE_ROUTES[pathname] ?? decodeURIComponent(pathname).replace(/^\/+/, '');
+  } catch {
+    return sendJson(response, 400, { error: { code: 'INVALID_PATH', message: 'Invalid path.' } });
+  }
   const safePath = normalize(requestedPath).replace(/^(\.\.[\\/])+/u, '');
   if (safePath.includes('..')) return sendJson(response, 400, { error: { code: 'INVALID_PATH', message: 'Invalid path.' } });
   const extension = extname(safePath);
   if (!MIME_TYPES[extension]) return sendJson(response, 404, { error: { code: 'NOT_FOUND', message: 'Resource not found.' } });
+  const filePath = join(publicRoot, safePath);
   try {
-    const content = await readFile(join(publicRoot, safePath));
-    response.writeHead(200, { 'content-type': MIME_TYPES[extension], 'x-content-type-options': 'nosniff' });
+    const info = await stat(filePath);
+    if (!info.isFile()) throw new Error('not a file');
+    // Files have no content hash in their names, so browsers always
+    // revalidate (no-cache) and a redeploy can never mix stale JS with new HTML;
+    // the ETag keeps revalidation a cheap 304.
+    const gzip = COMPRESSIBLE.has(extension) && info.size >= GZIP_MIN_BYTES && /\bgzip\b/u.test(request.headers['accept-encoding'] ?? '');
+    const etag = `W/"${info.size.toString(16)}-${Math.floor(info.mtimeMs).toString(16)}${gzip ? '-gz' : ''}"`;
+    const headers = { 'content-type': MIME_TYPES[extension], 'cache-control': 'no-cache', etag, vary: 'Accept-Encoding' };
+    const candidates = (request.headers['if-none-match'] ?? '').split(',').map((tag) => tag.trim());
+    if (candidates.includes(etag)) {
+      response.writeHead(304, headers);
+      return response.end();
+    }
+    let content = await readFile(filePath);
+    if (gzip) {
+      const key = `${safePath}:${etag}`;
+      let compressed = gzipCache.get(key);
+      if (!compressed) {
+        if (gzipCache.size >= GZIP_CACHE_MAX) gzipCache.clear();
+        compressed = gzipSync(content);
+        gzipCache.set(key, compressed);
+      }
+      content = compressed;
+      headers['content-encoding'] = 'gzip';
+    }
+    headers['content-length'] = String(content.length);
+    response.writeHead(200, headers);
     return response.end(headOnly ? undefined : content);
   } catch { return sendJson(response, 404, { error: { code: 'NOT_FOUND', message: 'Resource not found.' } }); }
 }

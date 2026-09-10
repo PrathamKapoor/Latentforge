@@ -319,6 +319,25 @@ curl -f http://127.0.0.1:4173/health
 curl -f http://127.0.0.1:4173/ready
 ```
 
+The image runs as the unprivileged `node` user and enables per-client rate limits by default (30 experiments and 3 seed characterizations per minute per client); override them with `-e` or `--env-file`.
+
+---
+
+## Deploy to Render (free hosting)
+
+LatentForge needs a host that keeps a process running (the Node server plus its persistent PyTorch worker), so static hosts such as GitHub Pages or Vercel cannot run the live experiments. [Render](https://render.com) runs the Docker image directly from this repository using [`render.yaml`](render.yaml).
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/PrathamKapoor/Latentforge)
+
+1. Sign in to [render.com](https://render.com) with the GitHub account that owns this repository, and allow Render to access the repository.
+2. Click the button above, or choose **New → Blueprint** in the Render dashboard and select this repository. Render reads `render.yaml` and proposes one free web service named `latentforge`.
+3. Click **Apply**. The first build installs CPU PyTorch and takes several minutes. The deploy goes live once `GET /ready` reports that the worker is up.
+4. Open the `https://latentforge-….onrender.com` URL Render shows. `/` is the overview and `/lab` is the interactive laboratory.
+
+Every push to `main` redeploys automatically. Nothing needs configuring: there are no API keys or secrets, and the Blueprint already sets `PORT`, `LATENTFORGE_TRUST_PROXY=true` and the rate limits.
+
+**Free-plan behaviour:** the service sleeps after about 15 minutes without traffic. The next visit wakes it, which takes about a minute, and the pages show "Starting the local worker…" until it is ready. Measured memory use is about 250 MB, within the free plan's 512 MB. For an always-on site, switch the service to a paid instance type in Render. Any other Docker host (Fly.io, Railway, a VPS) works the same way: run the image, route traffic to `$PORT`, and set `LATENTFORGE_TRUST_PROXY=true` if a proxy sits in front of it.
+
 ---
 
 ## Configuration & Resource Limits
@@ -339,6 +358,9 @@ Runtime parameters and queue limits can be adjusted via environment variables. A
 | `LATENTFORGE_MAX_TASK_LENGTH` | `24` | Maximum move-sequence length for the `trained-recurrent` backend only — the three original backends are architecturally fixed at exactly 4 moves regardless of this value |
 | `LATENTFORGE_MAX_REASONING_BUDGET` | `24` | Ceiling on reasoning budget; the three original backends can only narrow their own fixed `{1,2,4,8}` set toward this value, never exceed it |
 | `LATENTFORGE_MAX_BODY_BYTES` | `65536` | Maximum HTTP request payload size in real bytes (correctly accounts multibyte UTF-8, not decoded string length) |
+| `LATENTFORGE_RATE_LIMIT_PER_MINUTE` | `0` (`30` in Docker) | Experiment requests allowed per client per minute; excess requests get `429 RATE_LIMITED` with `Retry-After`. `0` disables the limit |
+| `LATENTFORGE_CHARACTERIZATION_RATE_LIMIT_PER_MINUTE` | `0` (`3` in Docker) | Same, for the 20-execution seed characterization endpoint |
+| `LATENTFORGE_TRUST_PROXY` | `false` | Set to `true` behind a reverse proxy: clients are identified by `X-Forwarded-For`, and HSTS is sent for HTTPS requests |
 
 ---
 

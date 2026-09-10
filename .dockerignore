@@ -1,5 +1,12 @@
 .git
 .superpowers
+.venv
+.venv*/
+**/__pycache__
+**/*.pyc
+.env
+.env.*
+!.env.example
 docs
 research/references
 test

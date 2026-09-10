@@ -9,7 +9,7 @@ const files = [
   'src/reasoning/variable-length-navigation-task.js', 'src/reasoning/worker-client.js',
   'src/experiments/reasoning-budget-sweep.js', 'src/experiments/hierarchical-comparison.js', 'src/experiments/bdh-cq-demonstration-sweep.js',
   'src/experiments/seed-characterization.js', 'src/ui/guided-experience.js', 'public/guided-experience.js', 'src/server/config.js',
-  'src/server/server.js', 'src/server/index.js', 'public/app.js', 'public/flagship.js', 'public/charts.js', 'public/site.js', 'public/landing.js',
+  'src/server/server.js', 'src/server/rate-limiter.js', 'src/server/index.js', 'public/app.js', 'public/flagship.js', 'public/charts.js', 'public/site.js', 'public/landing.js',
   'scripts/python-runtime.mjs', 'scripts/test.mjs', 'scripts/start.mjs',
 ];
 

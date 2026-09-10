@@ -1,0 +1,33 @@
+# Render Blueprint for LatentForge — https://render.com/docs/blueprint-spec
+#
+# One Docker web service: the Node HTTP server plus its persistent
+# Python/PyTorch worker, built from ./Dockerfile. Measured footprint is
+# ~250 MB RAM (Node ~50 MB + worker ~190 MB), within the free plan's 512 MB.
+# Free instances sleep after ~15 minutes without traffic; the first request
+# afterwards wakes the service, and the pages wait on GET /ready meanwhile.
+services:
+  - type: web
+    name: latentforge
+    runtime: docker
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # /ready only passes once the Python worker is up, so a deploy whose
+    # worker cannot start is never promoted, and a worker that dies later
+    # gets the instance restarted.
+    healthCheckPath: /ready
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      # Render terminates TLS and forwards the client address in
+      # X-Forwarded-For; trust it for rate limiting and send HSTS.
+      - key: LATENTFORGE_TRUST_PROXY
+        value: "true"
+      - key: LATENTFORGE_RATE_LIMIT_PER_MINUTE
+        value: "30"
+      - key: LATENTFORGE_CHARACTERIZATION_RATE_LIMIT_PER_MINUTE
+        value: "3"

@@ -420,9 +420,22 @@ $('submit-explanation').addEventListener('click', () => {
 $('enter-sandbox').addEventListener('click', () => { if (!guided.manipulated || !guided.quizPassed || !guided.explanationSubmitted) return; $('mode-status').textContent = 'SANDBOX MODE'; document.querySelector('#experiment').scrollIntoView?.({ behavior: 'smooth' }); });
 
 const originalSubmit = form.listeners;
+// A freshly started (or woken) host needs a few seconds to load PyTorch.
+// Wait for GET /ready before the automatic preset run instead of failing it;
+// after the deadline the run is attempted anyway and reports its own error.
+async function waitForWorker(timeoutMs = 90000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try { if ((await fetch('/ready')).ok) return; } catch { /* network blip: keep polling */ }
+    $('form-status').textContent = 'Starting the local worker… the first run can take up to a minute on a sleeping host.';
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+}
+
 if (typeof window !== 'undefined') {
-  window.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('DOMContentLoaded', async () => {
     renderGuidedState();
+    await waitForWorker();
     form.requestSubmit?.();
   });
 }

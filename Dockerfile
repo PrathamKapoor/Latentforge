@@ -44,9 +44,20 @@ COPY results ./results
 ENV NODE_ENV=production
 ENV PORT=4173
 ENV HOST=0.0.0.0
+# The app directory is read-only for the runtime user, so Python must not
+# try to write __pycache__ next to the worker modules.
+ENV PYTHONDONTWRITEBYTECODE=1
+# Public-hosting defaults: per-client request budgets (requests/minute).
+# Characterization runs 20 executions per request, hence the smaller budget.
+# Override with -e/--env-file; set to 0 to disable.
+ENV LATENTFORGE_RATE_LIMIT_PER_MINUTE=30
+ENV LATENTFORGE_CHARACTERIZATION_RATE_LIMIT_PER_MINUTE=3
 EXPOSE 4173
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||4173)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+# Run as the image's unprivileged `node` user (uid 1000), not root.
+USER node
 
 CMD ["node", "src/server/index.js"]
