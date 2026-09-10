@@ -7,22 +7,36 @@ import { pythonWorker } from '../reasoning/worker-client.js';
 import { buildRecurrentResult } from '../reasoning/recurrent-latent-backend.js';
 import { buildHrmInspiredResult } from '../reasoning/hrm-inspired-backend.js';
 import { buildBdhCqInspiredResult } from '../reasoning/bdh-cq-inspired-backend.js';
+import { buildTrainedRecurrentResult, THINKING_STEPS_TRAIN } from '../reasoning/trained-recurrent-backend.js';
 import { runReasoningBudgetSweep } from '../experiments/reasoning-budget-sweep.js';
 import { runSeedCharacterization, ALL_CHARACTERIZATION_SEEDS } from '../experiments/seed-characterization.js';
 import { encodeLineNavigationTask } from '../reasoning/line-navigation-task.js';
 import { MAX_BODY_BYTES, REQUEST_TIMEOUT_MS } from './config.js';
 
 const publicRoot = fileURLToPath(new URL('../../public/', import.meta.url));
+const flagshipResultsPath = fileURLToPath(new URL('../../results/flagship-experiment.json', import.meta.url));
+let cachedFlagshipResults; // the file never changes at runtime — read once, reuse
 const MIME_TYPES = { '.css': 'text/css; charset=utf-8', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
 
 // Backends whose computation runs on the persistent Python worker. `synthetic`
 // is deliberately excluded here: it has no Python dependency and stays
 // available even when the worker is not ready (see the route handler below).
 const LIVE_SWEEP_BUDGETS = Object.freeze([1, 2, 4, 8]);
+// The flagship model's own evaluated sweep (research/flagship/evaluate.py's
+// BUDGET_SWEEP) includes its training budget so a live request at the
+// canonical budget can be directly compared to the reported curve.
+const TRAINED_RECURRENT_SWEEP_BUDGETS = Object.freeze([0, 1, 2, THINKING_STEPS_TRAIN, 8, 16, 24]);
+const LIVE_SWEEP_BUDGETS_BY_BACKEND = Object.freeze({
+  recurrent: LIVE_SWEEP_BUDGETS,
+  'hrm-inspired': LIVE_SWEEP_BUDGETS,
+  'bdh-cq-inspired': LIVE_SWEEP_BUDGETS,
+  'trained-recurrent': TRAINED_RECURRENT_SWEEP_BUDGETS,
+});
 const LIVE_RESULT_BUILDERS = Object.freeze({
   recurrent: buildRecurrentResult,
   'hrm-inspired': buildHrmInspiredResult,
   'bdh-cq-inspired': buildBdhCqInspiredResult,
+  'trained-recurrent': buildTrainedRecurrentResult,
 });
 
 export function createServer({ requestTimeoutMs = REQUEST_TIMEOUT_MS } = {}) {
@@ -74,6 +88,9 @@ async function handleRequest(request, response, signal) {
         const body = await readJsonBody(request);
         return await handleCharacterizationRequest(body, response, signal);
       }
+      if (request.method === 'GET' && request.url === '/api/flagship-results') {
+        return await handleFlagshipResultsRequest(response);
+      }
       if (request.method === 'POST' && request.url.startsWith('/api/')) {
         return sendJson(response, 404, { error: { code: 'NOT_FOUND', message: 'API endpoint not found.' } });
       }
@@ -109,11 +126,12 @@ async function handleExperimentRequest(body, response, signal) {
   }
 
   const buildResult = LIVE_RESULT_BUILDERS[backendId];
+  const sweepBudgets = LIVE_SWEEP_BUDGETS_BY_BACKEND[backendId];
   const result = await pythonWorker.enqueue(async (send) => {
     const primary = await buildResult(send, body);
     if (!includeBudgetSweep) return primary;
 
-    const remainingBudgets = LIVE_SWEEP_BUDGETS.filter((value) => value !== body.reasoningBudget);
+    const remainingBudgets = sweepBudgets.filter((value) => value !== body.reasoningBudget);
     const remainingSweep = await runReasoningBudgetSweep({
       task: body.task,
       backend: backendId,
@@ -128,7 +146,7 @@ async function handleExperimentRequest(body, response, signal) {
         id: `sweep-${backendId}-${body.task.replaceAll(',', '')}-20260907`,
         task: body.task,
         backend: backendId,
-        budgets: [...LIVE_SWEEP_BUDGETS],
+        budgets: [...sweepBudgets],
         evidenceLevel: 'LIVE',
         runs,
       },
@@ -138,6 +156,28 @@ async function handleExperimentRequest(body, response, signal) {
   // another experiment" rather than silently absorbing queue time into a
   // fake-looking instant response.
   return sendJson(response, 200, { ...result.result, queueTelemetry: result.telemetry });
+}
+
+/**
+ * Serves the flagship experiment's machine-readable results
+ * (results/flagship-experiment.json, produced by
+ * research/flagship/evaluate.py) so the UI's budget/length accuracy
+ * charts read the exact same file a reviewer would reproduce with `python
+ * research/flagship/run_experiment.py` — never a hand-typed duplicate of
+ * these numbers. No Python worker involved; this is a static read, so it
+ * works even if the worker never became ready.
+ */
+async function handleFlagshipResultsRequest(response) {
+  if (!cachedFlagshipResults) {
+    try {
+      cachedFlagshipResults = await readFile(flagshipResultsPath, 'utf8');
+    } catch {
+      return sendJson(response, 503, { error: { code: 'RESULTS_UNAVAILABLE', message: 'Flagship results have not been generated. Run: python research/flagship/run_experiment.py' } });
+    }
+  }
+  if (response.writableEnded || response.destroyed) return;
+  response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'x-content-type-options': 'nosniff' });
+  return response.end(cachedFlagshipResults);
 }
 
 /**

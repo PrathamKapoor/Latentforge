@@ -46,6 +46,38 @@ test('POST /api/experiment executes the selected live recurrent backend with act
   });
 });
 
+test('POST /api/experiment executes the flagship trained-recurrent backend with a backend-specific budget sweep', async () => {
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/experiment`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ task: '1,1,1,1,1,1,1,1,1,1,1,1', reasoningBudget: 4, backend: 'trained-recurrent' }),
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.metadata.evidenceLevel, 'LIVE');
+    assert.equal(body.backend.id, 'trained-recurrent-flagship-v1');
+    assert.equal(body.groundTruth, 10);
+    assert.deepEqual(body.budgetSweep.budgets, [0, 1, 2, 4, 8, 16, 24]);
+    assert.equal(body.budgetSweep.runs.length, 7);
+  });
+});
+
+test('POST /api/experiment rejects a trained-recurrent task outside the configured length bounds', async () => {
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/experiment`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ task: '1', reasoningBudget: 4, backend: 'trained-recurrent' }),
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 400);
+    assert.equal(body.error.code, 'UNSUPPORTED_TASK');
+  });
+});
+
 test('POST /api/experiment defaults an omitted backend to the live recurrent backend', async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/experiment`, {

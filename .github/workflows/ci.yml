@@ -73,5 +73,9 @@ jobs:
           curl -sf -X POST http://127.0.0.1:4173/api/experiment \
             -H 'content-type: application/json' \
             -d '{"backend":"recurrent","task":"1,0,1,1","reasoningBudget":4,"includeBudgetSweep":false}'
+          curl -sf -X POST http://127.0.0.1:4173/api/experiment \
+            -H 'content-type: application/json' \
+            -d '{"backend":"trained-recurrent","task":"1,1,1,1,1,1,1,1,1,1,1,1","reasoningBudget":4,"includeBudgetSweep":false}'
+          curl -sf http://127.0.0.1:4173/api/flagship-results > /dev/null
           docker logs latentforge-ci
           docker stop latentforge-ci

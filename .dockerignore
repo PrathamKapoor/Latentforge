@@ -1,7 +1,7 @@
 .git
 .superpowers
 docs
-research
+research/references
 test
 node_modules
 *.log

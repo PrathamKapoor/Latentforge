@@ -14,6 +14,46 @@
       <nav aria-label="Primary navigation"><a href="#learn">Explore</a><a href="#experiment">Experiment</a><a href="#research">Research</a><a href="#limitations">Limitations</a><a class="nav-run" href="#experiment">Run experiment <span aria-hidden="true">↗</span></a></nav>
     </header>
     <main id="top">
+      <section class="flagship-section" id="flagship" aria-labelledby="flagship-title">
+        <p class="eyebrow">FLAGSHIP RESULT / TRAINED MODEL</p>
+        <h2 id="flagship-title">Does more latent computation help a trained model reach problem lengths it never saw in training?</h2>
+        <p class="hero-copy">A real GRU-based recurrent model (not an untrained fixed-seed toy) is trained on short move sequences (length 2–8) and evaluated on much longer, held-out sequences (length 12–24) it never saw during training. The trained weights never change below — only the number of extra "thinking" steps applied at inference time does.</p>
+        <div class="flagship-charts">
+          <div class="flagship-chart-wrap">
+            <h3>Held out (unseen lengths 12–24)</h3>
+            <div id="flagship-chart-unseen" class="flagship-chart"></div>
+          </div>
+          <div class="flagship-chart-wrap">
+            <h3>In-distribution (seen lengths 2–8)</h3>
+            <div id="flagship-chart-seen" class="flagship-chart"></div>
+          </div>
+        </div>
+        <p id="flagship-summary" class="field-help">Loading measured results…</p>
+        <details class="flagship-run">
+          <summary>Run one live example against the trained model</summary>
+          <form id="flagship-run-form" class="flagship-run-form">
+            <label for="flagship-task">Task (comma-separated 0/1 moves, length 2–24)</label>
+            <input id="flagship-task" name="flagshipTask" value="1,1,1,1,1,1,1,1,1,1,1,1,1,1" autocomplete="off" />
+            <label for="flagship-budget">Thinking steps (computation budget)</label>
+            <select id="flagship-budget" name="flagshipBudget">
+              <option value="0">0</option><option value="1">1</option><option value="2">2</option>
+              <option value="4" selected>4 (trained budget)</option><option value="8">8</option>
+              <option value="16">16</option><option value="24">24</option>
+            </select>
+            <button class="run-button" type="submit">Run live <span aria-hidden="true">→</span></button>
+            <p id="flagship-run-status" class="form-status" role="status" aria-live="polite">Not yet run.</p>
+          </form>
+          <div id="flagship-run-result" class="flagship-run-result" hidden>
+            <div class="result-grid">
+              <article class="result-card estimate"><p>PREDICTION</p><strong id="flagship-run-prediction">—</strong></article>
+              <article class="result-card truth"><p>GROUND TRUTH</p><strong id="flagship-run-truth">—</strong></article>
+              <article class="result-card verdict"><p>RESULT</p><strong id="flagship-run-verdict">—</strong></article>
+            </div>
+            <div id="flagship-run-trajectory" class="table-scroll"></div>
+          </div>
+        </details>
+        <p class="field-help">This is a real trained model with a genuine held-out-length evaluation — not a benchmark claim, not a production reasoning system. See <a href="#research">Research lineage</a> and <a href="#limitations">Limitations</a> below, and the original untrained-substrate demonstration further down for why direct latent-state inspection still matters even once a model is trained.</p>
+      </section>
       <section class="hero" id="learn" aria-labelledby="hero-title">
         <div class="eyebrow">LatentForge</div>
         <p class="kicker">An Interactive Laboratory for Recurrent Latent Reasoning</p>
@@ -137,6 +177,7 @@
       </section>
     </main>
     <footer><span>LatentForge — An Interactive Laboratory for Recurrent Latent Reasoning</span><span>LIVE LOCAL COMPUTATION / NO EXTERNAL MODEL PROVIDERS</span></footer>
+    <script type="module" src="/flagship.js"></script>
     <script type="module" src="/app.js"></script>
   </body>
 </html>

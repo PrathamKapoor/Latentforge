@@ -32,6 +32,14 @@ RUN npm ci --omit=dev || npm install --omit=dev
 
 COPY src ./src
 COPY public ./public
+# research/flagship holds the flagship model's class definition (imported,
+# not duplicated, by src/reasoning/trained-recurrent-runner.py) and its
+# trained checkpoint; results/ holds the evaluation numbers the UI reads
+# via GET /api/flagship-results. Both are small (checkpoints are tens of
+# KB each) and are the flagship backend's only external dependency besides
+# the Python packages already installed above.
+COPY research ./research
+COPY results ./results
 
 ENV NODE_ENV=production
 ENV PORT=4173

@@ -8,7 +8,9 @@
     "test": "node scripts/test.mjs",
     "dev": "node scripts/start.mjs",
     "start": "node scripts/start.mjs",
-    "build": "node scripts/build.mjs"
+    "build": "node scripts/build.mjs",
+    "experiment": "node scripts/experiment.mjs",
+    "claim-audit": "node scripts/claim-audit.mjs"
   },
   "engines": {
     "node": ">=24"

@@ -37,11 +37,24 @@ export const WORKER_EXECUTION_TIMEOUT_MS = int('LATENTFORGE_WORKER_EXECUTION_TIM
 /** Consecutive worker crash/restart attempts allowed before giving up. */
 export const MAX_WORKER_RESTART_ATTEMPTS = int('LATENTFORGE_MAX_WORKER_RESTART_ATTEMPTS', 3);
 
-/** Matches the existing line-navigation task's canonical 4-move length. */
-export const MAX_TASK_LENGTH = int('LATENTFORGE_MAX_TASK_LENGTH', 4);
+/**
+ * Ceiling on move-sequence length for the `trained-recurrent` (flagship,
+ * variable-length) backend only — the `recurrent`/`hrm-inspired`/
+ * `bdh-cq-inspired` toy backends are architecturally fixed at exactly 4
+ * moves and don't consult this constant. Default matches the flagship
+ * experiment's own TEST_UNSEEN length range (see research/flagship/task.py).
+ */
+export const MAX_TASK_LENGTH = int('LATENTFORGE_MAX_TASK_LENGTH', 24);
 
-/** Matches the existing ALLOWED_BUDGETS maximum (1, 2, 4, 8). */
-export const MAX_REASONING_BUDGET = int('LATENTFORGE_MAX_REASONING_BUDGET', 8);
+/**
+ * Ceiling on reasoning budget. The three toy backends can only ever
+ * narrow their own fixed {1, 2, 4, 8} set toward this value, never exceed
+ * it (see recurrent-latent-backend.js et al.); the flagship
+ * `trained-recurrent` backend uses this directly as its budget-sweep
+ * ceiling (its own budget sweep goes up to 24 — see
+ * research/flagship/evaluate.py's BUDGET_SWEEP).
+ */
+export const MAX_REASONING_BUDGET = int('LATENTFORGE_MAX_REASONING_BUDGET', 24);
 
 /** Matches the server's existing request-body size cap. */
 export const MAX_BODY_BYTES = int('LATENTFORGE_MAX_BODY_BYTES', 65536);

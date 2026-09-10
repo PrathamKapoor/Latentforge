@@ -6,6 +6,60 @@ LatentForge is a lightweight, fully local web application and research laborator
 
 The project provides a transparent, deterministic environment where learners and researchers can inspect latent trajectories step-by-step, manipulate computation budgets, and compare predictions against independently verified ground truth.
 
+## Try It
+
+```bash
+git clone https://github.com/PrathamKapoor/Latent-forge.git && cd Latent-forge
+npm install
+python3.10 -m venv .venv && . .venv/bin/activate   # or py -3.10 -m venv .venv on Windows
+python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+npm run dev
+```
+
+Open `http://127.0.0.1:4173` — the flagship result is the first thing on the page.
+
+## Flagship Result: A Trained Model, a Held-Out Length Test
+
+> **Does giving a *trained* recurrent model more latent computation help it reach problem lengths it never saw during training?**
+
+Every other section of this README describes an **untrained**, fixed-seed
+toy substrate — useful for inspecting mechanism, but not evidence that
+latent computation is *useful*. This section is different: a real GRU-based
+recurrent model is **trained** (not randomly initialized) on short
+move-sequences (length 2–8), then evaluated on much longer sequences
+(length 12–24) it never saw during training. The trained weights never
+change in what follows — only the number of extra "thinking" steps
+applied at inference time does.
+
+**Measured result** (3 training seeds; reproduce with `npm run experiment` — see [Reproduce the Flagship Result](#reproduce-the-flagship-result)):
+
+| Split | Budget 0 | 1 | 2 | **4 (trained)** | 8 | 16 | 24 | One-shot baseline |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Seen lengths (2–8) | 42.9% | 53.2% | 71.9% | **91.8%** | 82.7% | 42.9% | 29.0% | 59.3% |
+| **Held-out lengths (12–24)** | 29.4% | 36.9% | 50.0% | **67.4%** | 63.3% | 39.9% | 26.4% | 21.5% |
+
+Accuracy rises with computation budget up to the trained budget, then
+degrades — a useful regime and an unstable regime, not "more compute is
+always better." On held-out lengths the trained model beats the
+order-blind one-shot baseline at every nonzero budget. This was not
+tuned to look this way: the training budget was fixed before any test
+result existed, and the length-breakdown chart in the app uses that same
+fixed budget, not one selected because it scored best on test data (see
+`research/flagship/evaluate.py`).
+
+**What this does and does not show:** a small (hidden size 64), CPU,
+single-task-family result across 3 seeds — real and reproducible, not a
+benchmark claim, not evidence about production-scale reasoning models.
+See [Limitations](#known-limitations).
+
+Everything below this section describes the **original, untrained**
+substrate this project started with — kept because it is still the
+clearest place to see raw latent-state mechanics, and because the
+question it raised ("is this changing-hidden-state thing actually
+useful?") is exactly what the flagship result above answers.
+
+## The Original Architecture
+
 ```
 User / Learner
       │
@@ -55,6 +109,8 @@ To maintain strict scientific integrity, LatentForge explicitly delineates what 
 
 ## Core Laboratory Capabilities
 
+0. **Flagship Trained Model + Held-Out Evaluation:**
+   A real trained GRU-based recurrent model, a variable-length task family (2-24 moves), a length-based held-out test split, a one-shot baseline, and a measured budget-sweep result — see [Flagship Result](#flagship-result-a-trained-model-a-held-out-length-test) above.
 1. **Interactive Guided Experience:**
    A progressive learning path that runs an initial live preset (`1,0,1,1` with budget 4), requires the user to inspect latent state vectors ($h_0 \dots h_4$), and prompts a live computation budget modification before unlocking the full sandbox.
 2. **State Trajectory Inspection:**
@@ -72,7 +128,18 @@ To maintain strict scientific integrity, LatentForge explicitly delineates what 
 
 ---
 
-## The Canonical Experiment & Non-Monotonic Behavior
+## Mechanistic Demonstration (Original, Untrained Substrate)
+
+Everything from here down describes the project's original experiment:
+an **untrained**, deterministically-initialized recurrent substrate,
+fixed at exactly 4 moves. It does not by itself demonstrate that latent
+computation is *useful* — that is what the [Flagship
+Result](#flagship-result-a-trained-model-a-held-out-length-test) above
+answers. It remains the clearest place to inspect raw latent-state
+mechanics without a training process in the way, and it is the reason
+this project built real state inspection in the first place.
+
+### The Canonical Experiment & Non-Monotonic Behavior
 
 In the canonical experiment, the recurrent backend executes a bounded 1D line-navigation task:
 - **Input Task:** `1,0,1,1` (discrete moves on a clamped 5-element grid $[0..4]$ starting at position 2: $2 \xrightarrow{+1} 3 \xrightarrow{-1} 2 \xrightarrow{+1} 3 \xrightarrow{+1} 4$).
@@ -139,6 +206,10 @@ LatentForge draws inspiration from several published research papers while maint
 
 | Component | Status | Evidence / Location |
 |:---|:---:|:---|
+| **Flagship: Trained Recurrent Model** | Implemented | `LIVE`, `research/flagship/`, `src/reasoning/trained-recurrent-runner.py`, `test/trained-recurrent-runner.test.js` |
+| **Flagship: Variable-Length Task + Held-Out Split** | Implemented | `research/flagship/task.py`, `src/reasoning/variable-length-navigation-task.js`, `test/variable-length-navigation-task.test.js` |
+| **Flagship: One-Shot Baseline** | Implemented | `research/flagship/model.py` (`OneShotBaseline`), `results/flagship-experiment.json` |
+| **Flagship: Results UI (budget/length charts)** | Implemented | `public/flagship.js`, `GET /api/flagship-results` |
 | **Browser Application Shell & UI** | Implemented | `public/index.html`, `public/app.js`, `public/styles.css` |
 | **Guided Learning Experience** | Implemented | `public/guided-experience.js`, `test/phase3-experience.test.js` |
 | **Node.js HTTP Server & API** | Implemented | `src/server/server.js`, `test/api.test.js` |
@@ -153,7 +224,7 @@ LatentForge draws inspiration from several published research papers while maint
 | **Health & Readiness Endpoints** | Implemented | `GET /health`, `GET /ready`, `test/health.test.js` |
 | **Container Definition** | Created | `Dockerfile`, `.dockerignore` |
 | **CI Workflow** | Created | `.github/workflows/ci.yml` |
-| **Variable-length Task Families** | Deferred / Not Implemented | Input dimension fixed to length 4 |
+| **Variable-length Task Families** | Implemented (flagship only) | The original `recurrent`/`hrm-inspired`/`bdh-cq-inspired` backends remain fixed at exactly 4 moves by design; `trained-recurrent` supports length 2-24 |
 | **OmniRoute Routing Infrastructure** | Planned / Not Implemented | Conceptual roadmap only (`docs/ARCHITECTURE.md`) |
 | **URM / CODI Frameworks** | Not Implemented | Phase 0 research lineage references only |
 
@@ -261,18 +332,36 @@ Runtime parameters and queue limits can be adjusted via environment variables:
 | `LATENTFORGE_WORKER_START_TIMEOUT_MS` | `30000` | Allowed worker startup window before timing out |
 | `LATENTFORGE_WORKER_EXECUTION_TIMEOUT_MS` | `20000` | Maximum execution time per Python IPC invocation |
 | `LATENTFORGE_MAX_WORKER_RESTART_ATTEMPTS` | `3` | Worker crash restarts allowed before failing safe |
-| `LATENTFORGE_MAX_TASK_LENGTH` | `4` | Maximum allowable task length (fixed 4-move contract) |
-| `LATENTFORGE_MAX_REASONING_BUDGET` | `8` | Maximum allowable reasoning budget update steps |
-| `LATENTFORGE_MAX_BODY_BYTES` | `65536` | Maximum HTTP request payload size in bytes |
+| `LATENTFORGE_MAX_TASK_LENGTH` | `24` | Maximum move-sequence length for the `trained-recurrent` backend only — the three original backends are architecturally fixed at exactly 4 moves regardless of this value |
+| `LATENTFORGE_MAX_REASONING_BUDGET` | `24` | Ceiling on reasoning budget; the three original backends can only narrow their own fixed `{1,2,4,8}` set toward this value, never exceed it |
+| `LATENTFORGE_MAX_BODY_BYTES` | `65536` | Maximum HTTP request payload size in real bytes (correctly accounts multibyte UTF-8, not decoded string length) |
+
+---
+
+## Reproduce the Flagship Result
+
+```bash
+npm run experiment
+```
+
+Runs `research/flagship/train.py` (trains the recurrent model and the
+one-shot baseline across 3 fixed seeds) then `research/flagship/evaluate.py`
+(runs the full budget sweep on both held-out splits), and writes
+`results/flagship-experiment.json` — the exact file the app's flagship
+section reads via `GET /api/flagship-results`. Deterministic given the
+fixed seeds; takes well under a minute on a single CPU core. Nothing in
+the table above or in the app is typed by hand — regenerate it and
+compare.
 
 ---
 
 ## Known Limitations
 
-- **Substrate scale:** The models operate on an 8-dimensional hidden state with fixed weight matrices. They are designed for transparent mechanistic demonstration, not benchmark competition.
-- **Untrained parameters:** Parameters are deterministically initialized from fixed seeds rather than optimized via backpropagation.
-- **Task family:** Tasks are restricted to 4-step discrete 1D navigation on a 5-cell bounded grid.
-- **Container & CI verification:** Docker containerization and GitHub Actions workflow files are created and validated for configuration syntax, but have not been executed inside this local development sandbox.
+- **Flagship model scale:** Hidden size 64, a single synthetic task family, CPU float32, 3 training seeds. A real, reproducible result — not a benchmark claim, not a production-scale reasoning system.
+- **Original-substrate scale:** The untrained models operate on an 8-dimensional hidden state with fixed weight matrices. They are designed for transparent mechanistic demonstration, not benchmark competition.
+- **Untrained original substrate:** The `recurrent`/`hrm-inspired`/`bdh-cq-inspired` backends' parameters are deterministically initialized from fixed seeds rather than optimized via backpropagation — only the flagship `trained-recurrent` backend is actually trained.
+- **Task family:** The original three backends are restricted to 4-step discrete 1D navigation on a 5-cell bounded grid; the flagship backend generalizes this to 2-24 steps on an 11-cell grid, but it is still one task family, not a benchmark suite.
+- **Container & CI verification:** Docker containerization and the GitHub Actions workflow are verified via CI itself (both the `test` and `docker` jobs are green on `main`), not inside this local development sandbox, which has no `docker` binary — see `HACKATHON_BLOCKERS.md`.
 - **Visual browser verification:** All API endpoints, DOM mutations, and UI state progressions are covered by unit and contract tests, but automated end-to-end visual rendering tests were not executed.
 
 ---

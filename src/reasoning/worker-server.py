@@ -60,6 +60,7 @@ def _load_runner(module_name, filename):
 recurrent_runner = _load_runner("latentforge_recurrent_runner", "recurrent-runner.py")
 hrm_inspired_runner = _load_runner("latentforge_hrm_inspired_runner", "hrm-inspired-runner.py")
 bdh_cq_inspired_runner = _load_runner("latentforge_bdh_cq_inspired_runner", "bdh-cq-inspired-runner.py")
+trained_recurrent_runner = _load_runner("latentforge_trained_recurrent_runner", "trained-recurrent-runner.py")
 
 BACKENDS = {
     "recurrent": {
@@ -73,6 +74,10 @@ BACKENDS = {
     "bdh-cq-inspired": {
         "runner": bdh_cq_inspired_runner,
         "seed": bdh_cq_inspired_runner.REQUIRED_SEED,
+    },
+    "trained-recurrent": {
+        "runner": trained_recurrent_runner,
+        "seed": trained_recurrent_runner.REQUIRED_SEED,
     },
 }
 
@@ -110,6 +115,7 @@ def build_all_parameters():
     }
     parameters["hrm-inspired"] = hrm_inspired_runner.build_parameters()
     parameters["bdh-cq-inspired"] = bdh_cq_inspired_runner.build_parameters()
+    parameters["trained-recurrent"] = trained_recurrent_runner.build_parameters()
     return parameters
 
 
