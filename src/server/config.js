@@ -73,9 +73,16 @@ export const RATE_LIMIT_PER_MINUTE = int('LATENTFORGE_RATE_LIMIT_PER_MINUTE', 0)
 export const CHARACTERIZATION_RATE_LIMIT_PER_MINUTE = int('LATENTFORGE_CHARACTERIZATION_RATE_LIMIT_PER_MINUTE', 0);
 
 /**
- * Set when the server sits behind a reverse proxy (Render, Fly, Railway,
+ * Set when the server sits behind a reverse proxy (Railway, Render, Fly,
  * nginx). The client address for rate limiting is then read from the
  * proxy's X-Forwarded-For header instead of the socket, and HSTS is sent
- * for requests the proxy received over HTTPS.
+ * for requests the proxy received over HTTPS. An explicit
+ * LATENTFORGE_TRUST_PROXY always wins; when it is unset, the variables
+ * Railway and Render inject into every service turn it on, so those hosts
+ * need no manual configuration. Without it, every visitor would appear as
+ * the proxy's address and share a single rate-limit bucket.
  */
-export const TRUST_PROXY = bool('LATENTFORGE_TRUST_PROXY');
+const explicitTrustProxy = process.env.LATENTFORGE_TRUST_PROXY;
+export const TRUST_PROXY = explicitTrustProxy !== undefined && explicitTrustProxy !== ''
+  ? bool('LATENTFORGE_TRUST_PROXY')
+  : Boolean(process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_ID || process.env.RENDER);

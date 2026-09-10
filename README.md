@@ -323,6 +323,19 @@ The image runs as the unprivileged `node` user and enables per-client rate limit
 
 ---
 
+## Deploy to Railway (always on)
+
+[Railway](https://railway.com) keeps the service running without sleeping, and builds the same Docker image from this repository using [`railway.json`](railway.json). That file sets the Dockerfile build, a `GET /ready` deploy health check, restart on failure, one replica, and no sleeping.
+
+1. Sign in to [railway.com](https://railway.com) with the GitHub account that owns this repository. Railway's Hobby plan is needed for an always-on service; check [railway.com/pricing](https://railway.com/pricing) for current terms. The measured footprint is about 250 MB RAM and near-idle CPU.
+2. Choose **New Project → Deploy from GitHub repo**, allow Railway to access the repository, and select it. Railway picks up `railway.json` and builds the Dockerfile; the first build installs CPU PyTorch and takes several minutes.
+3. Open the service's **Settings → Networking** and click **Generate Domain**. Railway routes the domain to the port it passes in `PORT`, which the server listens on.
+4. Visit the `https://….up.railway.app` URL. `/` is the overview and `/lab` is the interactive laboratory.
+
+No variables need to be set. There are no API keys, the Docker image enables the rate limits, and the server detects Railway's injected environment and trusts its proxy automatically for client addresses and HSTS. Every push to `main` redeploys.
+
+---
+
 ## Deploy to Render (free hosting)
 
 LatentForge needs a host that keeps a process running (the Node server plus its persistent PyTorch worker), so static hosts such as GitHub Pages or Vercel cannot run the live experiments. [Render](https://render.com) runs the Docker image directly from this repository using [`render.yaml`](render.yaml).
@@ -336,7 +349,7 @@ LatentForge needs a host that keeps a process running (the Node server plus its 
 
 Every push to `main` redeploys automatically. Nothing needs configuring: there are no API keys or secrets, and the Blueprint already sets `PORT`, `LATENTFORGE_TRUST_PROXY=true` and the rate limits.
 
-**Free-plan behaviour:** the service sleeps after about 15 minutes without traffic. The next visit wakes it, which takes about a minute, and the pages show "Starting the local worker…" until it is ready. Measured memory use is about 250 MB, within the free plan's 512 MB. For an always-on site, switch the service to a paid instance type in Render. Any other Docker host (Fly.io, Railway, a VPS) works the same way: run the image, route traffic to `$PORT`, and set `LATENTFORGE_TRUST_PROXY=true` if a proxy sits in front of it.
+**Free-plan behaviour:** the service sleeps after about 15 minutes without traffic. The next visit wakes it, which takes about a minute, and the pages show "Starting the local worker…" until it is ready. Measured memory use is about 250 MB, within the free plan's 512 MB. For an always-on site, use [Railway](#deploy-to-railway-always-on) or a paid Render instance type. Any other Docker host (Fly.io, a VPS) works the same way: run the image, route traffic to `$PORT`, and set `LATENTFORGE_TRUST_PROXY=true` if a proxy sits in front of it.
 
 ---
 
@@ -360,7 +373,7 @@ Runtime parameters and queue limits can be adjusted via environment variables. A
 | `LATENTFORGE_MAX_BODY_BYTES` | `65536` | Maximum HTTP request payload size in real bytes (correctly accounts multibyte UTF-8, not decoded string length) |
 | `LATENTFORGE_RATE_LIMIT_PER_MINUTE` | `0` (`30` in Docker) | Experiment requests allowed per client per minute; excess requests get `429 RATE_LIMITED` with `Retry-After`. `0` disables the limit |
 | `LATENTFORGE_CHARACTERIZATION_RATE_LIMIT_PER_MINUTE` | `0` (`3` in Docker) | Same, for the 20-execution seed characterization endpoint |
-| `LATENTFORGE_TRUST_PROXY` | `false` | Set to `true` behind a reverse proxy: clients are identified by `X-Forwarded-For`, and HSTS is sent for HTTPS requests |
+| `LATENTFORGE_TRUST_PROXY` | auto | Behind a reverse proxy, clients are identified by `X-Forwarded-For` and HSTS is sent for HTTPS requests. When unset, this turns on automatically on Railway and Render (detected from their injected variables) and stays off elsewhere; `true` or `false` overrides the detection |
 
 ---
 

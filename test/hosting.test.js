@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { request as httpRequest } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { gunzipSync } from 'node:zlib';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { createServer } from '../src/server/server.js';
 import { createRateLimiter, clientAddress } from '../src/server/rate-limiter.js';
 
@@ -136,4 +138,25 @@ test('clientAddress ignores X-Forwarded-For unless the proxy is trusted', () => 
   const request = { headers: { 'x-forwarded-for': '198.51.100.7, 10.0.0.2' }, socket: { remoteAddress: '10.0.0.2' } };
   assert.equal(clientAddress(request, false), '10.0.0.2');
   assert.equal(clientAddress(request, true), '198.51.100.7');
+});
+
+// config.js reads the environment once at import, so each case runs in a fresh process.
+function trustProxyUnder(overrides) {
+  const env = { ...process.env };
+  for (const key of ['LATENTFORGE_TRUST_PROXY', 'RAILWAY_PROJECT_ID', 'RAILWAY_ENVIRONMENT_ID', 'RENDER']) delete env[key];
+  const configUrl = new URL('../src/server/config.js', import.meta.url).href;
+  return execFileSync(process.execPath, ['--input-type=module', '-e', `const m = await import(${JSON.stringify(configUrl)}); process.stdout.write(String(m.TRUST_PROXY));`], {
+    cwd: fileURLToPath(new URL('..', import.meta.url)),
+    env: { ...env, ...overrides },
+    encoding: 'utf8',
+  });
+}
+
+test('proxy trust is detected on Railway and Render, and an explicit setting always wins', () => {
+  assert.equal(trustProxyUnder({}), 'false');
+  assert.equal(trustProxyUnder({ RAILWAY_PROJECT_ID: 'p-123' }), 'true');
+  assert.equal(trustProxyUnder({ RAILWAY_ENVIRONMENT_ID: 'e-123' }), 'true');
+  assert.equal(trustProxyUnder({ RENDER: 'true' }), 'true');
+  assert.equal(trustProxyUnder({ RAILWAY_PROJECT_ID: 'p-123', LATENTFORGE_TRUST_PROXY: 'false' }), 'false');
+  assert.equal(trustProxyUnder({ LATENTFORGE_TRUST_PROXY: 'true' }), 'true');
 });
