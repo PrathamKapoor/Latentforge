@@ -33,7 +33,8 @@ Phase 3 opens with a live preset request rather than stored result data. Guided 
 
 | Path | Purpose |
 | --- | --- |
-| `public/` | Browser application shell, styles, and contract-consuming client. |
+| `public/` | Landing page (`index.html` → `/`), the interactive lab (`lab.html` → `/lab`), and their contract-consuming client scripts. |
+| `public/css/` | Design system: `tokens.css` (OKLCH palette, type, spacing), `site.css` (shared chrome and components), `landing.css`, `lab.css`. |
 | `src/server/` | Native Node HTTP server, static serving, and API boundary. |
 | `src/reasoning/` | Replaceable synthetic demonstration backend. |
 | `src/contracts/` | Preserved Phase 0 backend and experiment contracts. |

@@ -16,7 +16,7 @@ import { MAX_BODY_BYTES, REQUEST_TIMEOUT_MS } from './config.js';
 const publicRoot = fileURLToPath(new URL('../../public/', import.meta.url));
 const flagshipResultsPath = fileURLToPath(new URL('../../results/flagship-experiment.json', import.meta.url));
 let cachedFlagshipResults; // the file never changes at runtime — read once, reuse
-const MIME_TYPES = { '.css': 'text/css; charset=utf-8', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
+const MIME_TYPES = { '.css': 'text/css; charset=utf-8', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml' };
 
 // Backends whose computation runs on the persistent Python worker. `synthetic`
 // is deliberately excluded here: it has no Python dependency and stays
@@ -241,8 +241,13 @@ async function readJsonBody(request) {
   }
 }
 
+// Extensionless page routes. Everything else must name a file with an
+// allowed MIME type (see serveStatic).
+const PAGE_ROUTES = Object.freeze({ '/': 'index.html', '/lab': 'lab.html', '/lab/': 'lab.html' });
+
 async function serveStatic(url, response, headOnly) {
-  const requestedPath = url === '/' ? 'index.html' : decodeURIComponent(url.split('?')[0]).replace(/^\/+/, '');
+  const pathname = url.split('?')[0];
+  const requestedPath = PAGE_ROUTES[pathname] ?? decodeURIComponent(pathname).replace(/^\/+/, '');
   const safePath = normalize(requestedPath).replace(/^(\.\.[\\/])+/u, '');
   if (safePath.includes('..')) return sendJson(response, 400, { error: { code: 'INVALID_PATH', message: 'Invalid path.' } });
   const extension = extname(safePath);

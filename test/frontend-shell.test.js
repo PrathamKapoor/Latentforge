@@ -5,7 +5,8 @@ import vm from 'node:vm';
 import { executeSyntheticDemo } from '../src/reasoning/synthetic-demo-backend.js';
 import { createGuidedExperience } from '../src/ui/guided-experience.js';
 
-const html = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
+// The interactive laboratory lives at /lab (public/lab.html); / is the landing page.
+const html = await readFile(new URL('../public/lab.html', import.meta.url), 'utf8');
 const script = await readFile(new URL('../public/app.js', import.meta.url), 'utf8');
 
 // Minimal DOM boundary: run the actual browser controller without external dependencies.
