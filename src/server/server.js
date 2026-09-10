@@ -28,11 +28,18 @@ const LIVE_RESULT_BUILDERS = Object.freeze({
 export function createServer({ requestTimeoutMs = REQUEST_TIMEOUT_MS } = {}) {
   return createHttpServer(async (request, response) => {
     let timeout;
+    // Threaded down into pythonWorker.enqueue() so a request timeout doesn't
+    // just abandon the promise while the job keeps occupying the worker's
+    // single active slot — see worker-client.js's `enqueue`/`onAbort`.
+    const controller = new AbortController();
     try {
       await Promise.race([
-        handleRequest(request, response),
+        handleRequest(request, response, controller.signal),
         new Promise((_, reject) => {
-          timeout = setTimeout(() => reject(Object.assign(new Error('The experiment timed out. Please try again.'), { code: 'REQUEST_TIMEOUT' })), requestTimeoutMs);
+          timeout = setTimeout(() => {
+            controller.abort();
+            reject(Object.assign(new Error('The experiment timed out. Please try again.'), { code: 'REQUEST_TIMEOUT' }));
+          }, requestTimeoutMs);
         }),
       ]);
     } catch (error) {
@@ -50,7 +57,7 @@ export function createServer({ requestTimeoutMs = REQUEST_TIMEOUT_MS } = {}) {
   });
 }
 
-async function handleRequest(request, response) {
+async function handleRequest(request, response, signal) {
       if (request.method === 'GET' && request.url === '/health') {
         return sendJson(response, 200, { status: 'ok' });
       }
@@ -61,11 +68,11 @@ async function handleRequest(request, response) {
       }
       if (request.method === 'POST' && request.url === '/api/experiment') {
         const body = await readJsonBody(request);
-        return await handleExperimentRequest(body, response);
+        return await handleExperimentRequest(body, response, signal);
       }
       if (request.method === 'POST' && request.url === '/api/characterization') {
         const body = await readJsonBody(request);
-        return await handleCharacterizationRequest(body, response);
+        return await handleCharacterizationRequest(body, response, signal);
       }
       if (request.method === 'POST' && request.url.startsWith('/api/')) {
         return sendJson(response, 404, { error: { code: 'NOT_FOUND', message: 'API endpoint not found.' } });
@@ -84,7 +91,7 @@ async function handleRequest(request, response) {
  * the queue. The already-computed primary result is reused for its own row
  * in the sweep — it is never recomputed.
  */
-async function handleExperimentRequest(body, response) {
+async function handleExperimentRequest(body, response, signal) {
   const backendId = typeof body?.backend === 'string' ? body.backend : 'recurrent';
   const backendValidation = validateBackendId(backendId);
   if (!backendValidation.valid) return sendJson(response, 400, { error: { code: 'VALIDATION_ERROR', message: backendValidation.errors[0] } });
@@ -126,7 +133,7 @@ async function handleExperimentRequest(body, response) {
         runs,
       },
     };
-  });
+  }, { signal });
   // `telemetry.queueWaitMs` lets the UI honestly report "this waited behind
   // another experiment" rather than silently absorbing queue time into a
   // fake-looking instant response.
@@ -141,7 +148,7 @@ async function handleExperimentRequest(body, response) {
  * queue entry per run. Scoped to the `recurrent` backend only for this
  * phase (see docs/phase-7-deployability-hardening.md for why).
  */
-async function handleCharacterizationRequest(body, response) {
+async function handleCharacterizationRequest(body, response, signal) {
   const task = typeof body?.task === 'string' ? body.task : '1,0,1,1';
   try {
     encodeLineNavigationTask(task);
@@ -153,7 +160,7 @@ async function handleCharacterizationRequest(body, response) {
     task,
     seeds: ALL_CHARACTERIZATION_SEEDS,
     execute: (request) => buildRecurrentResult(send, request),
-  }));
+  }), { signal });
   return sendJson(response, 200, characterization);
 }
 
@@ -171,16 +178,23 @@ async function runSyntheticBudgetSweep(body, primaryResult, backend) {
 }
 
 async function readJsonBody(request) {
-  let raw = '';
+  const chunks = [];
+  let bytes = 0;
   for await (const chunk of request) {
-    raw += chunk;
-    if (raw.length > MAX_BODY_BYTES) {
+    // `chunk.length` is the actual byte count of this Buffer; accumulating
+    // decoded-string length instead would undercount every multibyte UTF-8
+    // character (each counts as 1-2 UTF-16 code units but 2-4 bytes on the
+    // wire), letting a multibyte payload sail past MAX_BODY_BYTES in real
+    // bytes while `string.length` still reports it as under the cap.
+    bytes += chunk.length;
+    if (bytes > MAX_BODY_BYTES) {
       const error = new Error('Request body is too large.');
       error.code = 'VALIDATION_ERROR';
       throw error;
     }
+    chunks.push(chunk);
   }
-  try { return JSON.parse(raw); } catch {
+  try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch {
     const error = new Error('Request body must contain valid JSON.');
     error.code = 'VALIDATION_ERROR';
     throw error;

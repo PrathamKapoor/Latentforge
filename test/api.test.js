@@ -159,3 +159,26 @@ test('POST /api/experiment returns structured validation errors for malformed JS
     }
   });
 });
+
+test('POST /api/experiment enforces the body-size cap on real bytes, not decoded string length', async () => {
+  await withServer(async (baseUrl) => {
+    // '€' is 1 UTF-16 code unit but 3 UTF-8 bytes. 40,000 of them is a
+    // ~40KB *string length* (comfortably under the 64KB default cap) but a
+    // ~120KB *byte* payload (well over it) — this only rejects if the body
+    // reader accounts real received bytes rather than `decodedString.length`.
+    const oversizedMultibyte = JSON.stringify({ task: '€'.repeat(40000), reasoningBudget: 4, backend: 'recurrent' });
+    assert.ok(Buffer.byteLength(oversizedMultibyte, 'utf8') > 65536, 'test payload must actually exceed the default byte cap');
+    assert.ok(oversizedMultibyte.length < 65536, 'test payload must stay under the cap by decoded character count, to distinguish the two accounting methods');
+
+    const response = await fetch(`${baseUrl}/api/experiment`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: oversizedMultibyte,
+    });
+    const result = await response.json();
+
+    assert.equal(response.status, 400);
+    assert.equal(result.error.code, 'VALIDATION_ERROR');
+    assert.match(result.error.message, /too large/i);
+  });
+});

@@ -103,6 +103,64 @@ test('the queue rejects new jobs once LATENTFORGE_MAX_QUEUE is exceeded', async 
   }
 });
 
+test('aborting a still-queued job drops it without touching the worker or the job ahead of it', async () => {
+  const isolatedClient = new PythonWorkerClient();
+  await isolatedClient.start();
+  try {
+    const blocker = isolatedClient.enqueue(async (send) => {
+      await send('recurrent', { inputVector: [1, 0, 1, 1], reasoningBudget: 8, seed: 20260907 });
+      await send('recurrent', { inputVector: [1, 0, 1, 1], reasoningBudget: 8, seed: 20260907 });
+      return 'blocker-done';
+    });
+    const controller = new AbortController();
+    const queued = isolatedClient.enqueue((send) => send('recurrent', { inputVector: [1, 0, 1, 1], reasoningBudget: 1, seed: 20260907 }), { signal: controller.signal });
+    controller.abort();
+    await assert.rejects(queued, (error) => { assert.equal(error.code, 'REQUEST_ABORTED'); return true; });
+    assert.equal(isolatedClient.getStatus().status, 'READY', 'a queued (not yet active) abort must not touch the running worker');
+    const { result } = await blocker;
+    assert.equal(result, 'blocker-done', 'the job ahead of the aborted one is unaffected');
+  } finally {
+    await isolatedClient.stop();
+  }
+});
+
+test('aborting the active job frees the worker immediately instead of waiting out the execution timeout', async () => {
+  const isolatedClient = new PythonWorkerClient();
+  await isolatedClient.start();
+  try {
+    const controller = new AbortController();
+    const active = isolatedClient.enqueue(async (send) => {
+      await send('recurrent', { inputVector: [1, 0, 1, 1], reasoningBudget: 8, seed: 20260907 });
+      controller.abort(); // abort while this job still holds the active slot
+      await send('recurrent', { inputVector: [1, 0, 1, 1], reasoningBudget: 8, seed: 20260907 });
+      return 'should not reach here';
+    }, { signal: controller.signal });
+    await assert.rejects(active); // the worker restart rejects the in-flight second `send`
+
+    const startedAt = Date.now();
+    // The restart itself (killing the old child, spawning + awaiting a new
+    // one) is genuinely asynchronous, so the worker may briefly still be
+    // 'RESTARTING' right after `active` rejects — retry across that narrow,
+    // real window rather than asserting instant readiness. The point being
+    // tested is that this resolves in low single-digit seconds, nothing
+    // close to WORKER_EXECUTION_TIMEOUT_MS (20s default).
+    let outcome;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      try {
+        outcome = await isolatedClient.enqueue((send) => send('recurrent', { inputVector: [1, 0, 1, 1], reasoningBudget: 1, seed: 20260907 }));
+        break;
+      } catch (error) {
+        if (error.code !== 'SERVICE_UNAVAILABLE' || Date.now() - startedAt > 15000) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
+    assert.equal(outcome.result.finalPrediction, 2);
+    assert.ok(Date.now() - startedAt < 15000, 'the next job must not wait out WORKER_EXECUTION_TIMEOUT_MS (20s default) — the abort should free the slot right away');
+  } finally {
+    await isolatedClient.stop();
+  }
+});
+
 test('stop() shuts the worker down cleanly and it can be started again', async () => {
   const isolatedClient = new PythonWorkerClient();
   await isolatedClient.start();

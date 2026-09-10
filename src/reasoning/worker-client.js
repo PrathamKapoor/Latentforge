@@ -160,8 +160,8 @@ export class PythonWorkerClient {
     for (const pending of this.pending.values()) { clearTimeout(pending.timeoutHandle); pending.reject(error); }
     this.pending.clear();
     const queued = this.queue.splice(0, this.queue.length);
-    for (const job of queued) job.reject(fail('WORKER_RESTARTING', 'The local worker restarted before this job could run.'));
-    if (this.activeJob) { this.activeJob.reject(error); this.activeJob = null; }
+    for (const job of queued) { job.cleanup?.(); job.reject(fail('WORKER_RESTARTING', 'The local worker restarted before this job could run.')); }
+    if (this.activeJob) { this.activeJob.cleanup?.(); this.activeJob.reject(error); this.activeJob = null; }
 
     this.status = 'RESTARTING';
     this.restartAttempts += 1;
@@ -177,8 +177,17 @@ export class PythonWorkerClient {
    * holds the worker's single active slot until it settles; `send(backend,
    * payload)` issues one request/response round-trip against the live
    * worker without competing for the outer queue again.
+   *
+   * `signal` (optional `AbortSignal`) lets a caller — typically the HTTP
+   * layer's own request timeout — abandon this job without leaving it to
+   * silently keep occupying the worker. A queued-but-not-yet-active job is
+   * simply dropped. An already-active job cannot be interrupted mid
+   * IPC-round-trip without a richer worker protocol, so it is treated like
+   * a hung worker: killed and restarted, which frees the single active slot
+   * immediately instead of waiting out WORKER_EXECUTION_TIMEOUT_MS.
    */
-  async enqueue(jobFn) {
+  async enqueue(jobFn, { signal } = {}) {
+    if (signal?.aborted) throw fail('REQUEST_ABORTED', 'The request was cancelled before it could run.');
     if (this.status === 'STOPPED') {
       await this.start(); // lazy auto-start: callers (tests, the HTTP route) need not coordinate startup themselves
     } else if (this.status === 'STARTING' || this.status === 'RESTARTING') {
@@ -189,6 +198,19 @@ export class PythonWorkerClient {
 
     return new Promise((resolve, reject) => {
       const job = { jobFn, resolve, reject, queuedAt: Date.now() };
+      if (signal) {
+        const onAbort = () => {
+          const index = this.queue.indexOf(job);
+          if (index !== -1) {
+            this.queue.splice(index, 1);
+            job.reject(fail('REQUEST_ABORTED', 'The request was cancelled before it could run.'));
+            return;
+          }
+          if (this.activeJob === job) this._restartHungWorker();
+        };
+        signal.addEventListener('abort', onAbort, { once: true });
+        job.cleanup = () => signal.removeEventListener('abort', onAbort);
+      }
       this.queue.push(job);
       this._pump();
     });
@@ -208,7 +230,7 @@ export class PythonWorkerClient {
         job.resolve({ result, telemetry: { queuedAt: job.queuedAt, startedAt, completedAt: Date.now(), queueWaitMs: startedAt - job.queuedAt, durationMs: Date.now() - startedAt } });
       })
       .catch((error) => { job.reject(error); })
-      .finally(() => { this.activeJob = null; this._pump(); });
+      .finally(() => { job.cleanup?.(); this.activeJob = null; this._pump(); });
   }
 
   _send(backend, payload) {
@@ -242,7 +264,8 @@ export class PythonWorkerClient {
   async stop() {
     this.stopping = true;
     const queued = this.queue.splice(0, this.queue.length);
-    for (const job of queued) job.reject(fail('SERVICE_SHUTTING_DOWN', 'The local worker is shutting down.'));
+    for (const job of queued) { job.cleanup?.(); job.reject(fail('SERVICE_SHUTTING_DOWN', 'The local worker is shutting down.')); }
+    if (this.activeJob) { this.activeJob.cleanup?.(); this.activeJob.reject(fail('SERVICE_SHUTTING_DOWN', 'The local worker is shutting down.')); this.activeJob = null; }
     for (const pending of this.pending.values()) { clearTimeout(pending.timeoutHandle); pending.reject(fail('SERVICE_SHUTTING_DOWN', 'The local worker is shutting down.')); }
     this.pending.clear();
     if (!this.child) { this.status = 'STOPPED'; return; }
