@@ -2,10 +2,15 @@ import { performance } from 'node:perf_hooks';
 import { createExperimentContract } from '../contracts/reasoning-backend.js';
 import { encodeLineNavigationTask, solveLineNavigationTask } from './line-navigation-task.js';
 import { pythonWorker } from './worker-client.js';
+import { MAX_REASONING_BUDGET } from '../server/config.js';
 
 export const RECURRENT_BACKEND_ID = 'recurrent-latent-toy-v1';
 export const RECURRENT_SEED = 20260907;
-const ALLOWED_BUDGETS = Object.freeze([1, 2, 4, 8]);
+// This backend's architecture is only validated at these four points, so
+// LATENTFORGE_MAX_REASONING_BUDGET can only ever narrow this set (e.g. to
+// [1, 2, 4] if set to 5-7), never widen it — 8 stays the ceiling regardless
+// of a higher configured value.
+const ALLOWED_BUDGETS = Object.freeze([1, 2, 4, 8].filter((budget) => budget <= MAX_REASONING_BUDGET));
 
 /**
  * A small, fixed, pre-declared set of additional seeds used ONLY by the
@@ -26,7 +31,7 @@ export function validateRecurrentRequest(request) {
     return { valid: false, errors: ['Request body must be a JSON object.'], code: 'VALIDATION_ERROR' };
   }
   if (!Number.isInteger(request.reasoningBudget) || !ALLOWED_BUDGETS.includes(request.reasoningBudget)) {
-    return { valid: false, errors: ['Reasoning budget must be one of 1, 2, 4, or 8.'], code: 'VALIDATION_ERROR' };
+    return { valid: false, errors: [`Reasoning budget must be one of ${ALLOWED_BUDGETS.join(', ')}.`], code: 'VALIDATION_ERROR' };
   }
   try {
     encodeLineNavigationTask(request.task);

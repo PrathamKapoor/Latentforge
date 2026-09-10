@@ -2,12 +2,15 @@ import { performance } from 'node:perf_hooks';
 import { createExperimentContract } from '../contracts/reasoning-backend.js';
 import { encodeLineNavigationTask, solveLineNavigationTask } from './line-navigation-task.js';
 import { pythonWorker } from './worker-client.js';
+import { MAX_REASONING_BUDGET } from '../server/config.js';
 
 export const BDH_CQ_INSPIRED_BACKEND_ID = 'bdh-cq-inspired-local-v1';
 export const BDH_CQ_SEED = 20260909;
 
 const ALLOWED_DEMONSTRATION_COUNTS = [1, 2, 3];
-const ALLOWED_BUDGETS = [1, 2, 4, 8];
+// This backend's S/H update schedule is only validated at these four
+// points, so LATENTFORGE_MAX_REASONING_BUDGET can only narrow this set.
+const ALLOWED_BUDGETS = [1, 2, 4, 8].filter((budget) => budget <= MAX_REASONING_BUDGET);
 
 function fail(code, message) {
   return Object.assign(new Error(message), { code });

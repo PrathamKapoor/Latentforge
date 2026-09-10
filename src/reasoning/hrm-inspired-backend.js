@@ -2,17 +2,20 @@ import { performance } from 'node:perf_hooks';
 import { createExperimentContract } from '../contracts/reasoning-backend.js';
 import { encodeLineNavigationTask, solveLineNavigationTask } from './line-navigation-task.js';
 import { pythonWorker } from './worker-client.js';
+import { MAX_REASONING_BUDGET } from '../server/config.js';
 
 export const HRM_INSPIRED_BACKEND_ID = 'hrm-inspired-hierarchical-recurrence-v1';
 export const HRM_INSPIRED_SEED = 20260908;
-const BUDGETS = [1, 2, 4, 8];
+// This backend's H/L cadence is only validated at these four points, so
+// LATENTFORGE_MAX_REASONING_BUDGET can only narrow this set, never widen it.
+const BUDGETS = [1, 2, 4, 8].filter((budget) => budget <= MAX_REASONING_BUDGET);
 const fail = (code, message) => Object.assign(new Error(message), { code });
 const finite = (v) => Array.isArray(v) && v.length === 8 && v.every(Number.isFinite);
 const argmax = (v) => v.indexOf(Math.max(...v));
 
 export function validateHrmInspiredRequest(request) {
   if (!request || typeof request !== 'object' || Array.isArray(request)) return { valid: false, errors: ['Request body must be a JSON object.'], code: 'VALIDATION_ERROR' };
-  if (!BUDGETS.includes(request.reasoningBudget)) return { valid: false, errors: ['Reasoning budget must be one of 1, 2, 4, or 8.'], code: 'VALIDATION_ERROR' };
+  if (!BUDGETS.includes(request.reasoningBudget)) return { valid: false, errors: [`Reasoning budget must be one of ${BUDGETS.join(', ')}.`], code: 'VALIDATION_ERROR' };
   try { encodeLineNavigationTask(request.task); } catch (error) { return { valid: false, errors: [error.message], code: 'UNSUPPORTED_TASK' }; }
   return { valid: true, errors: [] };
 }
